@@ -1,6 +1,6 @@
 # Agent Security Gateway
 
-Agent Security Gateway is a portfolio project inspired by the July 12 AI and cybersecurity briefing. It models a policy-enforcement proxy between an AI agent and its tools.
+Agent Security Gateway is a portfolio project inspired by what I found interesting in the news and various research papers. It models a policy-enforcement proxy between an AI agent and its tools.
 
 The gateway records provenance, assigns semantic risk scores, enforces least privilege, blocks suspicious flows, requires approval for sensitive actions, and emits OpenTelemetry-shaped trace events.
 
