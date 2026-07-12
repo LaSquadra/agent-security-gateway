@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-security-gateway"
+version = "0.1.0"
+description = "A policy-enforcement gateway for agent tool calls."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Ryan" }]
+license = { text = "MIT" }
+keywords = ["ai-security", "agents", "appsec", "policy", "opentelemetry"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Topic :: Security",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.scripts]
+asg-demo = "agent_security_gateway.demo:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
