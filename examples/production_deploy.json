@@ -1,0 +1,14 @@
+{
+  "agent_id": "release-agent-01",
+  "role": "release_manager",
+  "tool_name": "deployment",
+  "action": "deploy",
+  "arguments": {
+    "environment": "production"
+  },
+  "user_intent": "Deploy the reviewed service to production.",
+  "provenance": {
+    "source": "ticket",
+    "trust_level": "trusted"
+  }
+}

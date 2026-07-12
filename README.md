@@ -26,7 +26,7 @@ Windows PowerShell:
 py -3 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 py -3 -m pip install -e .
-asg-demo
+asg demo
 ```
 
 macOS/Linux:
@@ -35,13 +35,34 @@ macOS/Linux:
 python3 -m venv .venv
 source .venv/bin/activate
 python3 -m pip install -e .
-asg-demo
+asg demo
 ```
 
 You can also run the demo without installing the package:
 
 ```powershell
-py -3 -m agent_security_gateway.demo
+py -3 -m agent_security_gateway.cli demo
+```
+
+## CLI Workflow
+
+Validate the default policy:
+
+```powershell
+asg validate-policy config/default_policy.json
+```
+
+Inspect a single request:
+
+```powershell
+asg inspect examples/prompt_injection_image.json --policy config/default_policy.json
+```
+
+Review an approval-required request:
+
+```powershell
+asg inspect examples/production_deploy.json --policy config/default_policy.json
+asg resolve-approval <approval-id> approved --actor ryan
 ```
 
 ## What The Demo Shows
@@ -55,13 +76,21 @@ The demo sends several simulated agent tool requests through the gateway:
 - A request that tries to send secrets to an external destination is blocked.
 
 Trace events are written to `traces/demo-traces.jsonl`.
+Approval records are written to `approvals/` when a request requires human review.
 
 ## Project Structure
 
 ```text
 agent-security-gateway/
+  config/
+    default_policy.json # Role permissions, thresholds, approval actions
+  examples/
+    *.json              # Sample agent tool-call requests and attacks
   src/agent_security_gateway/
+    approvals.py        # Pending approval records and resolution
+    cli.py              # Command-line inspection workflow
     gateway.py          # Main policy enforcement flow
+    io.py               # JSON request loading helpers
     models.py           # Request, decision, provenance, and trace models
     policy.py           # Policy loading and evaluation
     risk.py             # Semantic and contextual risk scoring
@@ -79,7 +108,6 @@ Good next milestones:
 
 - Add an MCP-compatible adapter.
 - Export real OpenTelemetry spans.
-- Add signed approval records.
 - Add taint tracking for retrieved content and memory writes.
 - Build a small dashboard for reviewing blocked and approved tool calls.
 - Add policy packs for AppSec, SOC, and software-engineering agents.

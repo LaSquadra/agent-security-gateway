@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
 
 from .models import AgentRequest, Decision
 
@@ -30,6 +33,36 @@ class GatewayPolicy:
             approval_actions={"deploy", "delete", "send_external", "execute_shell"},
             blocked_tools={"raw_shell"},
         )
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "GatewayPolicy":
+        role_permissions = {
+            role: set(actions)
+            for role, actions in data.get("role_permissions", {}).items()
+        }
+        return cls(
+            role_permissions=role_permissions,
+            approval_actions=set(data.get("approval_actions", [])),
+            blocked_tools=set(data.get("blocked_tools", [])),
+            block_risk_at=int(data.get("block_risk_at", 80)),
+            require_approval_risk_at=int(data.get("require_approval_risk_at", 50)),
+        )
+
+    @classmethod
+    def load(cls, path: str | Path) -> "GatewayPolicy":
+        with Path(path).open("r", encoding="utf-8") as policy_file:
+            return cls.from_dict(json.load(policy_file))
+
+    def validate(self) -> list[str]:
+        errors: list[str] = []
+        if not self.role_permissions:
+            errors.append("Policy must define at least one role permission set.")
+        if self.block_risk_at <= self.require_approval_risk_at:
+            errors.append("block_risk_at must be greater than require_approval_risk_at.")
+        for role, actions in self.role_permissions.items():
+            if not actions:
+                errors.append(f"Role '{role}' must allow at least one action.")
+        return errors
 
     def evaluate_permissions(self, request: AgentRequest) -> tuple[Decision, list[str]]:
         reasons: list[str] = []

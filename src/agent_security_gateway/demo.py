@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from .approvals import ApprovalStore
 from .gateway import AgentSecurityGateway
 from .models import AgentRequest, Provenance
+from .policy import GatewayPolicy
 from .telemetry import JsonlTraceExporter
 
 
@@ -61,9 +63,16 @@ def build_demo_requests() -> list[AgentRequest]:
     ]
 
 
-def main() -> None:
-    trace_path = Path("traces/demo-traces.jsonl")
-    gateway = AgentSecurityGateway(trace_exporter=JsonlTraceExporter(trace_path))
+def run_demo(
+    policy: GatewayPolicy | None = None,
+    trace_path: Path = Path("traces/demo-traces.jsonl"),
+    approval_dir: Path = Path("approvals"),
+) -> None:
+    gateway = AgentSecurityGateway(
+        policy=policy,
+        trace_exporter=JsonlTraceExporter(trace_path),
+        approval_store=ApprovalStore(approval_dir),
+    )
 
     print("Agent Security Gateway demo\n")
     for request in build_demo_requests():
@@ -76,6 +85,11 @@ def main() -> None:
         print()
 
     print(f"Trace events written to {trace_path}")
+    print(f"Approval records written to {approval_dir}")
+
+
+def main() -> None:
+    run_demo()
 
 
 if __name__ == "__main__":

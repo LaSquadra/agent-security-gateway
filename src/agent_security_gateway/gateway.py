@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
+from .approvals import ApprovalStore
 from .models import AgentRequest, Decision, GatewayDecision
 from .policy import GatewayPolicy
 from .risk import score_request
@@ -13,9 +14,11 @@ class AgentSecurityGateway:
         self,
         policy: GatewayPolicy | None = None,
         trace_exporter: JsonlTraceExporter | None = None,
+        approval_store: ApprovalStore | None = None,
     ) -> None:
         self.policy = policy or GatewayPolicy.default()
         self.trace_exporter = trace_exporter
+        self.approval_store = approval_store
 
     def inspect(self, request: AgentRequest) -> GatewayDecision:
         permission_decision, permission_reasons = self.policy.evaluate_permissions(
@@ -41,6 +44,9 @@ class AgentSecurityGateway:
 
         if self.trace_exporter:
             self.trace_exporter.emit_decision(request, gateway_decision)
+
+        if self.approval_store and gateway_decision.approval_id:
+            self.approval_store.create(request, gateway_decision)
 
         return gateway_decision
 

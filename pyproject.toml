@@ -19,6 +19,7 @@ classifiers = [
 
 [project.scripts]
 asg-demo = "agent_security_gateway.demo:main"
+asg = "agent_security_gateway.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
