@@ -4,6 +4,8 @@ Agent Security Gateway is a portfolio project inspired by what I found interesti
 
 The gateway records provenance, assigns semantic risk scores, enforces least privilege, blocks suspicious flows, requires approval for sensitive actions, and emits OpenTelemetry-shaped trace events.
 
+In one sentence: this project turns every agent tool call into a structured request, checks that request against policy and semantic risk signals, then returns `allow`, `block`, or `require_approval`.
+
 ## Why This Project
 
 Modern agents can read repositories, call tools, update memory, open tickets, deploy code, and touch secrets. That creates a new AppSec boundary: natural-language instructions and retrieved content can influence privileged actions.
@@ -17,6 +19,37 @@ This project demonstrates how familiar security ideas map onto agent systems:
 - Provenance tracking
 - Audit trails and trace events
 - Prompt-injection and data-exfiltration controls
+
+## How It Works
+
+The gateway acts like a reference monitor between an AI agent and its tools:
+
+```text
+agent -> gateway -> tool
+```
+
+Instead of letting an agent directly call tools such as `read_file`, `write_file`, `deploy`, or `send_external`, the request is inspected first. The gateway asks four questions:
+
+1. Is this agent role allowed to perform this action?
+2. Does the request contain suspicious semantic signals?
+3. Should the action be allowed, blocked, or routed to human approval?
+4. What evidence should be written to traces and approval records?
+
+The main unit of work is an `AgentRequest`. It includes the agent identity, role, requested tool, action, arguments, user intent, and provenance. Provenance means where the instruction or input came from, such as a trusted user, repository content, email, web content, or an uploaded file.
+
+Policy enforcement is configured in `config/default_policy.json`. The policy defines role permissions, globally blocked tools, approval-required actions, and risk thresholds. This models least privilege: a researcher can read and search, a developer can modify code and run tests, and a release manager can perform deployment-oriented actions.
+
+Risk scoring happens separately from authorization. The risk engine looks for prompt-injection language, secret-like terms, sensitive actions, low-trust provenance, and possible exfiltration. A request can be blocked even if the role normally has permission, because semantic risk and authorization are evaluated together.
+
+The final decision is intentionally conservative:
+
+```text
+If either policy or risk says block -> block
+Else if either says approval -> require approval
+Else -> allow
+```
+
+For approval-required actions, the gateway writes a pending approval record to `approvals/`. For observability, it writes JSONL trace events to `traces/`, including `request_received`, `risk_scored`, `policy_evaluated`, and `decision_emitted`.
 
 ## Quick Start
 
@@ -77,6 +110,23 @@ The demo sends several simulated agent tool requests through the gateway:
 
 Trace events are written to `traces/demo-traces.jsonl`.
 Approval records are written to `approvals/` when a request requires human review.
+
+## Walkthrough Script
+
+If you are walking someone through the repo, use this order:
+
+1. Start with this README and explain the project goal: a policy-enforcement gateway between agents and tools.
+2. Open `config/default_policy.json` and explain roles, permissions, approval actions, blocked tools, and thresholds.
+3. Open `examples/prompt_injection_image.json` and explain how untrusted content can influence an agent.
+4. Open `src/agent_security_gateway/models.py` and explain the request, provenance, finding, decision, and trace models.
+5. Open `src/agent_security_gateway/risk.py` and explain semantic risk scoring.
+6. Open `src/agent_security_gateway/policy.py` and explain least-privilege authorization.
+7. Open `src/agent_security_gateway/gateway.py` and show how policy and risk decisions are combined.
+8. Open `src/agent_security_gateway/approvals.py` and `telemetry.py` to explain human review and auditability.
+
+The short interview explanation:
+
+> This project models a policy-enforcement gateway for AI agents. Instead of letting an agent directly execute tools, every tool call becomes a structured request. The gateway evaluates traditional authorization through role permissions, then evaluates AI-specific semantic risk such as prompt injection, secret handling, low-trust provenance, and possible exfiltration. It returns allow, block, or require approval. It also writes audit traces and creates approval records for sensitive actions.
 
 ## Project Structure
 
