@@ -126,3 +126,14 @@ Milestone 6 adds OTLP-compatible span export:
 - Tests verify OTLP payload structure and CLI output.
 
 This keeps the project dependency-light while making the trace output compatible with OpenTelemetry collector ingestion paths that accept protobuf-JSON OTLP payloads.
+
+## Milestone 7 Status
+
+Milestone 7 adds a narrative showcase:
+
+- `asg showcase` runs the major security scenarios in one command.
+- The showcase prints a compact decision table for live walkthroughs.
+- It writes traces, approvals, ledgers, MCP evidence, and OTLP JSON output to `showcase_output/`.
+- Tests verify that the showcase runs and produces expected artifacts.
+
+This gives the project a human-friendly demonstration path separate from the test suite.

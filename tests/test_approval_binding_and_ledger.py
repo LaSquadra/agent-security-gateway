@@ -91,6 +91,39 @@ class ApprovalBindingAndLedgerTests(unittest.TestCase):
         self.assertEqual(decision.decision, Decision.BLOCK)
         self.assertIn("was not found", " ".join(decision.reasons))
 
+    def test_non_delegated_approval_ref_argument_allows_exact_action_once(self) -> None:
+        plain_gateway = AgentSecurityGateway(approval_store=self.approval_store)
+        pending = plain_gateway.inspect(
+            AgentRequest(
+                agent_id="release-agent-plain",
+                role="release_manager",
+                tool_name="deployment",
+                action="deploy",
+                arguments={"environment": "production"},
+                user_intent="Deploy production.",
+                provenance=Provenance(source="ticket", trust_level="trusted"),
+            )
+        )
+        assert pending.approval_id is not None
+        self.approval_store.resolve(pending.approval_id, "approved", "reviewer")
+
+        approved = plain_gateway.inspect(
+            AgentRequest(
+                agent_id="release-agent-plain",
+                role="release_manager",
+                tool_name="deployment",
+                action="deploy",
+                arguments={
+                    "environment": "production",
+                    "approval_ref": pending.approval_id,
+                },
+                user_intent="Deploy production with approval.",
+                provenance=Provenance(source="ticket", trust_level="trusted"),
+            )
+        )
+
+        self.assertEqual(approved.decision, Decision.ALLOW)
+
     def test_decision_ledger_records_security_context(self) -> None:
         decision = self.gateway.inspect(self._deploy_request())
         entries = [

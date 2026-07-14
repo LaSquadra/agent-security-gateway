@@ -75,6 +75,27 @@ Run without installing:
 py -3 -m agent_security_gateway.cli demo
 ```
 
+## Showcase
+
+For a portfolio walkthrough, use the narrative showcase:
+
+```powershell
+asg showcase
+```
+
+It runs a curated sequence:
+
+- low-risk read allowed
+- prompt-injection request blocked
+- tainted external send blocked
+- production deploy routed to approval
+- approved deploy allowed once
+- approval replay blocked
+- delegated MCP-style read allowed and executed
+- OTLP span export written
+
+The showcase prints a compact table and writes reviewable artifacts to `showcase_output/`.
+
 ## CLI Workflow
 
 Validate the default policy:
@@ -242,6 +263,7 @@ agent-security-gateway/
     models.py           # Request, delegation, approval, decision, trace models
     policy.py           # Policy loading and evaluation
     risk.py             # Semantic and contextual risk scoring
+    showcase.py         # Narrative portfolio demo
     taint.py            # Helpers for adding taint labels
     telemetry.py        # JSONL and OTLP-compatible trace exporters
   tests/

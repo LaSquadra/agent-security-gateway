@@ -14,6 +14,12 @@ class CliTests(unittest.TestCase):
 
         self.assertEqual(result, 0)
 
+    def test_showcase_command_runs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            result = _run_cli(["showcase", "--output-dir", temp_dir])
+
+        self.assertEqual(result, 0)
+
     def test_inspect_command_writes_trace_and_approval_record(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             trace_path = Path(temp_dir) / "trace.jsonl"

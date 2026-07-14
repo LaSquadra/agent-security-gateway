@@ -11,6 +11,7 @@ from .io import dump_json, load_request
 from .ledger import DecisionLedger
 from .mcp_adapter import McpGatewayAdapter, McpToolCall
 from .policy import GatewayPolicy
+from .showcase import run_showcase
 from .telemetry import JsonlTraceExporter, OtlpJsonTraceExporter
 
 
@@ -38,6 +39,16 @@ def main(argv: list[str] | None = None) -> int:
     demo_parser.add_argument(
         "--ledger-path", default="ledger/decisions.jsonl", help="Decision ledger JSONL output."
     )
+
+    showcase_parser = subparsers.add_parser(
+        "showcase", help="Run a narrative end-to-end security showcase."
+    )
+    showcase_parser.add_argument(
+        "--output-dir",
+        default="showcase_output",
+        help="Directory for showcase traces, approvals, ledgers, and OTLP output.",
+    )
+    showcase_parser.add_argument("--policy", help="Path to a JSON policy file.")
 
     inspect_parser = subparsers.add_parser(
         "inspect", help="Inspect one request JSON file."
@@ -105,6 +116,10 @@ def main(argv: list[str] | None = None) -> int:
             Path(args.ledger_path),
             _trace_exporter(args.trace_path, args.trace_format),
         )
+        return 0
+
+    if args.command == "showcase":
+        run_showcase(Path(args.output_dir), _load_policy(args.policy))
         return 0
 
     if args.command == "inspect":

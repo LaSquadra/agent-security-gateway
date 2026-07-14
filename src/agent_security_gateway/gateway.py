@@ -42,7 +42,11 @@ class AgentSecurityGateway:
             delegation_decision, permission_decision, risk_decision
         )
         reasons = delegation_reasons + permission_reasons + risk_reasons
-        approval_ref = request.delegation.approval_ref if request.delegation else None
+        approval_ref = (
+            request.delegation.approval_ref
+            if request.delegation and request.delegation.approval_ref
+            else request.arguments.get("approval_ref")
+        )
         consumed_approval_id = None
 
         if (

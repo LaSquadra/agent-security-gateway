@@ -9,3 +9,4 @@ build/
 traces/*.jsonl
 approvals/*.json
 ledger/*.jsonl
+showcase_output/
