@@ -43,6 +43,7 @@ The current implementation is dependency-light and uses local JSON/JSONL files s
 - `ApprovalStore` creates pending approvals and validates single-use approval bindings.
 - `DecisionLedger` writes append-only audit entries for reconstruction.
 - `JsonlTraceExporter` emits OpenTelemetry-shaped JSONL trace events.
+- `OtlpJsonTraceExporter` emits OTLP/HTTP-compatible JSON span payloads.
 - `McpGatewayAdapter` converts MCP-style tool calls into gateway-inspected requests and only executes handlers after an `allow` decision.
 - Taint labels on provenance model untrusted retrieved content, prompt-injection risk, secrets, credentials, or untrusted code.
 
@@ -101,6 +102,12 @@ Route an MCP-style tool call through the gateway:
 asg mcp-call examples/mcp_low_risk_read_call.json --policy config/default_policy.json
 ```
 
+Write OTLP-compatible JSON spans instead of JSONL traces:
+
+```powershell
+asg inspect examples/low_risk_read.json --trace-format otlp-json --trace-path traces/otlp-traces.json
+```
+
 ## Core Flow
 
 For each request, the gateway evaluates:
@@ -151,7 +158,7 @@ What resource was targeted?
 Why was the action allowed, blocked, or routed to approval?
 ```
 
-Operational traces are written as JSONL events such as `request_received`, `risk_scored`, `policy_evaluated`, and `decision_emitted`.
+Operational traces are written as JSONL events such as `request_received`, `risk_scored`, `policy_evaluated`, and `decision_emitted`. The same events can also be exported as OTLP/HTTP-compatible JSON spans with `--trace-format otlp-json`.
 
 For delegated calls, the trace ID comes from the delegation envelope, so the same trace can follow an agent, sub-agent, and MCP-style tool hop.
 
@@ -236,7 +243,7 @@ agent-security-gateway/
     policy.py           # Policy loading and evaluation
     risk.py             # Semantic and contextual risk scoring
     taint.py            # Helpers for adding taint labels
-    telemetry.py        # JSONL trace exporter
+    telemetry.py        # JSONL and OTLP-compatible trace exporters
   tests/
     test_approval_binding_and_ledger.py
     test_cli.py
@@ -284,7 +291,7 @@ Current coverage includes gateway decisions, policy validation, CLI workflows, d
 
 ## Next Milestones
 
-- Export native OpenTelemetry spans.
+- Send OTLP spans directly to a collector endpoint.
 - Extend taint tracking into memory writes and retrieved-document stores.
 - Build a small dashboard for reviewing blocked and approved tool calls.
 - Add policy packs for AppSec, SOC, and software-engineering agents.

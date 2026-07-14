@@ -69,10 +69,11 @@ def run_demo(
     trace_path: Path = Path("traces/demo-traces.jsonl"),
     approval_dir: Path = Path("approvals"),
     ledger_path: Path = Path("ledger/decisions.jsonl"),
+    trace_exporter: JsonlTraceExporter | None = None,
 ) -> None:
     gateway = AgentSecurityGateway(
         policy=policy,
-        trace_exporter=JsonlTraceExporter(trace_path),
+        trace_exporter=trace_exporter or JsonlTraceExporter(trace_path),
         approval_store=ApprovalStore(approval_dir),
         decision_ledger=DecisionLedger(ledger_path),
     )

@@ -11,7 +11,7 @@ from .io import dump_json, load_request
 from .ledger import DecisionLedger
 from .mcp_adapter import McpGatewayAdapter, McpToolCall
 from .policy import GatewayPolicy
-from .telemetry import JsonlTraceExporter
+from .telemetry import JsonlTraceExporter, OtlpJsonTraceExporter
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -25,6 +25,12 @@ def main(argv: list[str] | None = None) -> int:
     demo_parser.add_argument("--policy", help="Path to a JSON policy file.")
     demo_parser.add_argument(
         "--trace-path", default="traces/demo-traces.jsonl", help="Trace JSONL output."
+    )
+    demo_parser.add_argument(
+        "--trace-format",
+        choices=["jsonl", "otlp-json"],
+        default="jsonl",
+        help="Trace output format.",
     )
     demo_parser.add_argument(
         "--approval-dir", default="approvals", help="Directory for approval records."
@@ -42,6 +48,12 @@ def main(argv: list[str] | None = None) -> int:
         "--trace-path", default="traces/inspect-traces.jsonl", help="Trace JSONL output."
     )
     inspect_parser.add_argument(
+        "--trace-format",
+        choices=["jsonl", "otlp-json"],
+        default="jsonl",
+        help="Trace output format.",
+    )
+    inspect_parser.add_argument(
         "--approval-dir", default="approvals", help="Directory for approval records."
     )
     inspect_parser.add_argument(
@@ -55,6 +67,12 @@ def main(argv: list[str] | None = None) -> int:
     mcp_parser.add_argument("--policy", help="Path to a JSON policy file.")
     mcp_parser.add_argument(
         "--trace-path", default="traces/mcp-traces.jsonl", help="Trace JSONL output."
+    )
+    mcp_parser.add_argument(
+        "--trace-format",
+        choices=["jsonl", "otlp-json"],
+        default="jsonl",
+        help="Trace output format.",
     )
     mcp_parser.add_argument(
         "--approval-dir", default="approvals", help="Directory for approval records."
@@ -80,14 +98,20 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "demo":
         policy = _load_policy(args.policy)
-        run_demo(policy, Path(args.trace_path), Path(args.approval_dir), Path(args.ledger_path))
+        run_demo(
+            policy,
+            Path(args.trace_path),
+            Path(args.approval_dir),
+            Path(args.ledger_path),
+            _trace_exporter(args.trace_path, args.trace_format),
+        )
         return 0
 
     if args.command == "inspect":
         policy = _load_policy(args.policy)
         gateway = AgentSecurityGateway(
             policy=policy,
-            trace_exporter=JsonlTraceExporter(args.trace_path),
+            trace_exporter=_trace_exporter(args.trace_path, args.trace_format),
             approval_store=ApprovalStore(args.approval_dir),
             decision_ledger=DecisionLedger(args.ledger_path),
         )
@@ -99,7 +123,7 @@ def main(argv: list[str] | None = None) -> int:
         policy = _load_policy(args.policy)
         gateway = AgentSecurityGateway(
             policy=policy,
-            trace_exporter=JsonlTraceExporter(args.trace_path),
+            trace_exporter=_trace_exporter(args.trace_path, args.trace_format),
             approval_store=ApprovalStore(args.approval_dir),
             decision_ledger=DecisionLedger(args.ledger_path),
         )
@@ -146,6 +170,12 @@ def _demo_tools():
             "content": f"simulated read of {arguments.get('path', '<missing path>')}"
         }
     }
+
+
+def _trace_exporter(path: str, trace_format: str):
+    if trace_format == "otlp-json":
+        return OtlpJsonTraceExporter(path)
+    return JsonlTraceExporter(path)
 
 
 if __name__ == "__main__":

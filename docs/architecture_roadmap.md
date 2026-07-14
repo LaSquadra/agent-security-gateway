@@ -114,3 +114,15 @@ Milestone 5 adds taint-aware risk and evidence:
 - Tests cover tainted sensitive flows and trace/ledger taint attribution.
 
 This makes provenance more than source metadata: it now carries risk forward from untrusted content into action-time decisions.
+
+## Milestone 6 Status
+
+Milestone 6 adds OTLP-compatible span export:
+
+- Trace events are generated once and shared by JSONL and OTLP exporters.
+- `OtlpJsonTraceExporter` writes OTLP/HTTP-compatible JSON payloads.
+- CLI commands support `--trace-format jsonl` and `--trace-format otlp-json`.
+- OTLP spans include resource attributes, scope spans, trace IDs, span IDs, parent span IDs, timestamps, status, and security attribution attributes.
+- Tests verify OTLP payload structure and CLI output.
+
+This keeps the project dependency-light while making the trace output compatible with OpenTelemetry collector ingestion paths that accept protobuf-JSON OTLP payloads.

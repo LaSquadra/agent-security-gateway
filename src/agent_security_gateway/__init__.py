@@ -13,6 +13,7 @@ from .models import (
 )
 from .policy import GatewayPolicy
 from .taint import add_taint, request_with_taint
+from .telemetry import OtlpJsonTraceExporter
 
 __all__ = [
     "AgentSecurityGateway",
@@ -27,6 +28,7 @@ __all__ = [
     "McpGatewayAdapter",
     "McpToolCall",
     "McpToolResult",
+    "OtlpJsonTraceExporter",
     "add_taint",
     "request_with_taint",
 ]
