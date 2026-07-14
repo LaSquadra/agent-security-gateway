@@ -1,55 +1,51 @@
 # Agent Security Gateway
 
-Agent Security Gateway is a portfolio project inspired by what I found interesting in the news and various research papers. It models a policy-enforcement proxy between an AI agent and its tools.
+Agent Security Gateway is a portfolio project for exploring **AI agent security engineering**. It models a policy-enforcement layer between autonomous agents and the tools they want to use.
 
-The gateway records provenance, assigns semantic risk scores, enforces least privilege, blocks suspicious flows, requires approval for sensitive actions, and emits OpenTelemetry-shaped trace events.
+The project turns every tool call into a structured request, evaluates authorization and semantic risk, handles delegated authority, binds approvals to exact actions, records audit evidence, and exposes an MCP-style adapter seam.
 
-In one sentence: this project turns every agent tool call into a structured request, checks that request against policy and semantic risk signals, then returns `allow`, `block`, or `require_approval`.
+```text
+agent or sub-agent
+  -> signed delegation envelope
+  -> Agent Security Gateway
+  -> policy + risk + approval + revocation checks
+  -> allow | block | require_approval
+  -> traces + decision ledger
+  -> tool execution only if allowed
+```
 
 ## Why This Project
 
-Modern agents can read repositories, call tools, update memory, open tickets, deploy code, and touch secrets. That creates a new AppSec boundary: natural-language instructions and retrieved content can influence privileged actions.
+Modern AI agents can read files, modify code, invoke APIs, update tickets, interact with infrastructure, call MCP tools, and handle secrets. That creates a new AppSec boundary: natural-language instructions and retrieved content can influence privileged actions.
 
-This project demonstrates how familiar security ideas map onto agent systems:
+This project demonstrates how familiar security concepts map onto agent systems:
 
-- Reference monitors for tool calls
+- Reference monitors for agent tool calls
 - Least-privilege authorization
-- Semantic risk scoring
+- Delegated authority and scope attenuation
+- Signed capability-style envelopes
+- Prompt-injection and exfiltration risk scoring
 - Human approval gates
+- Approval binding and replay prevention
 - Provenance tracking
-- Audit trails and trace events
-- Prompt-injection and data-exfiltration controls
+- MCP-style tool-call mediation
+- Trace correlation and append-only decision evidence
 
-## How It Works
+## What It Does Today
 
-The gateway acts like a reference monitor between an AI agent and its tools:
+The current implementation is dependency-light and uses local JSON/JSONL files so the architecture is easy to inspect.
 
-```text
-agent -> gateway -> tool
-```
+- `GatewayPolicy` loads role permissions, approval actions, blocked tools, thresholds, and `policy_version`.
+- `AgentSecurityGateway` returns `allow`, `block`, or `require_approval`.
+- `DelegationState` stores durable authority outside prompts and memory.
+- `DelegationEnvelope` carries signed action-time authority with each delegated request.
+- `AuthorizationStateStore` persists delegation state and revocation epochs.
+- `ApprovalStore` creates pending approvals and validates single-use approval bindings.
+- `DecisionLedger` writes append-only audit entries for reconstruction.
+- `JsonlTraceExporter` emits OpenTelemetry-shaped JSONL trace events.
+- `McpGatewayAdapter` converts MCP-style tool calls into gateway-inspected requests and only executes handlers after an `allow` decision.
 
-Instead of letting an agent directly call tools such as `read_file`, `write_file`, `deploy`, or `send_external`, the request is inspected first. The gateway asks four questions:
-
-1. Is this agent role allowed to perform this action?
-2. Does the request contain suspicious semantic signals?
-3. Should the action be allowed, blocked, or routed to human approval?
-4. What evidence should be written to traces and approval records?
-
-The main unit of work is an `AgentRequest`. It includes the agent identity, role, requested tool, action, arguments, user intent, and provenance. Provenance means where the instruction or input came from, such as a trusted user, repository content, email, web content, or an uploaded file.
-
-Policy enforcement is configured in `config/default_policy.json`. The policy defines role permissions, globally blocked tools, approval-required actions, and risk thresholds. This models least privilege: a researcher can read and search, a developer can modify code and run tests, and a release manager can perform deployment-oriented actions.
-
-Risk scoring happens separately from authorization. The risk engine looks for prompt-injection language, secret-like terms, sensitive actions, low-trust provenance, and possible exfiltration. A request can be blocked even if the role normally has permission, because semantic risk and authorization are evaluated together.
-
-The final decision is intentionally conservative:
-
-```text
-If either policy or risk says block -> block
-Else if either says approval -> require approval
-Else -> allow
-```
-
-For approval-required actions, the gateway writes a pending approval record to `approvals/`. For observability, it writes JSONL trace events to `traces/`, including `request_received`, `risk_scored`, `policy_evaluated`, and `decision_emitted`.
+This is not a production gateway yet. It does not run a real LLM, expose a live MCP server, or export native OpenTelemetry spans. It is an architecture lab showing where those integrations would fit.
 
 ## Quick Start
 
@@ -71,7 +67,7 @@ python3 -m pip install -e .
 asg demo
 ```
 
-You can also run the demo without installing the package:
+Run without installing:
 
 ```powershell
 py -3 -m agent_security_gateway.cli demo
@@ -85,7 +81,7 @@ Validate the default policy:
 asg validate-policy config/default_policy.json
 ```
 
-Inspect a single request:
+Inspect a prompt-injection scenario:
 
 ```powershell
 asg inspect examples/prompt_injection_image.json --policy config/default_policy.json
@@ -104,31 +100,61 @@ Route an MCP-style tool call through the gateway:
 asg mcp-call examples/mcp_low_risk_read_call.json --policy config/default_policy.json
 ```
 
-## Delegation Roadmap
+## Core Flow
 
-The project now includes an early control-plane model for delegated agent authority:
+For each request, the gateway evaluates:
 
-- `DelegationState` stores durable authority outside prompts and memory.
-- `DelegationScope` limits which tools, actions, and resources an agent may use.
-- `DelegationEnvelope` carries signed action-time authority with each delegated request.
-- `AuthorizationStateStore` persists delegation records and revocation state.
-- `EnvelopeSigner` signs and verifies envelopes using standard-library HMAC.
+1. Delegation envelope signature, expiry, identity, scope, and revocation epoch.
+2. Role-based policy permissions.
+3. Semantic risk signals such as prompt injection, secret handling, sensitive actions, low-trust provenance, and possible exfiltration.
+4. Approval binding, if an approval reference is supplied.
+5. Trace and ledger evidence for reconstruction.
 
-The gateway can validate delegated requests by checking the envelope signature, expiry, current delegation state, revocation epoch, agent identity, root principal, and requested scope before normal policy and risk checks run.
+The final decision is conservative:
 
-Approvals are now bound to the exact request context they approve: agent, tool, action, resource, delegation ID, and policy version. Approved records are single-use by default, so an approval for one action cannot be replayed against a different action or reused after consumption.
+```text
+If any control says block -> block
+Else if any control says approval -> require_approval
+Else -> allow
+```
 
-The gateway can also write an append-only decision ledger to `ledger/decisions.jsonl`. The ledger captures the request ID, trace ID, delegation context, root principal, approval ID, risk findings, reasons, and final decision for audit reconstruction.
+## Delegation And Approval Model
 
-The project also includes an MCP adapter stub. It accepts an MCP-like tool call, converts it into an `AgentRequest`, asks the gateway for a decision, and only invokes a registered tool handler when the decision is `allow`. This models where a real MCP proxy would enforce delegation, policy, risk, approval, and trace context before tool execution.
+Delegated requests carry a signed `DelegationEnvelope` containing the delegation ID, agent ID, parent agent ID, root principal, scope reference, approval reference, revocation epoch, expiry, and trace ID.
 
-## Observability Model
+The gateway validates the envelope against durable `DelegationState`. Child scopes must attenuate parent scopes: a child may receive less authority than its parent, but not more.
 
-Trace events and ledger entries are designed to support reconstruction and attribution.
+Approvals are bound to the exact request context they approve:
 
-Operational traces are written as JSONL events such as `request_received`, `risk_scored`, `policy_evaluated`, and `decision_emitted`. For delegated calls, the trace ID comes from the delegation envelope, so the same trace can follow an agent, sub-agent, and MCP-style tool hop.
+- agent
+- tool
+- action
+- resource
+- delegation ID
+- policy version
 
-Each trace event includes attribution fields such as:
+Approved records are single-use by default. An approval for `deploy production` cannot be replayed for `deploy staging`, reused for `send_external`, or consumed a second time.
+
+## Observability And Reconstruction
+
+Trace events and ledger entries are designed to answer:
+
+```text
+Who acted?
+Which agent or sub-agent made the request?
+Which root principal delegated authority?
+Which scope and revocation epoch were live?
+Which approval applied?
+Which policy version was used?
+What resource was targeted?
+Why was the action allowed, blocked, or routed to approval?
+```
+
+Operational traces are written as JSONL events such as `request_received`, `risk_scored`, `policy_evaluated`, and `decision_emitted`.
+
+For delegated calls, the trace ID comes from the delegation envelope, so the same trace can follow an agent, sub-agent, and MCP-style tool hop.
+
+Trace events include attribution fields such as:
 
 - `request.id`
 - `trace.id`
@@ -142,12 +168,7 @@ Each trace event includes attribution fields such as:
 - `approval.id`
 - `policy.version`
 
-The decision ledger records the same core identifiers plus risk findings, reasons, resource, and final decision. The intent is that traces help with operational debugging, while the ledger provides durable audit evidence for answering who acted, under which delegated authority, against which resource, under which policy version, and with what result.
-
-See:
-
-- `docs/architecture_roadmap.md`
-- `docs/delegation_model.md`
+The decision ledger records the same core identifiers plus risk findings, reasons, resource, and final decision. Traces are for operational debugging; the ledger is for durable audit reconstruction.
 
 ## What The Demo Shows
 
@@ -159,73 +180,96 @@ The demo sends several simulated agent tool requests through the gateway:
 - A request containing suspicious prompt-injection language is blocked.
 - A request that tries to send secrets to an external destination is blocked.
 
-Trace events are written to `traces/demo-traces.jsonl`.
-Approval records are written to `approvals/` when a request requires human review.
+Demo output is written to:
 
-## Walkthrough Script
+```text
+traces/demo-traces.jsonl
+approvals/
+ledger/decisions.jsonl
+```
 
-If you are walking someone through the repo, use this order:
-
-1. Start with this README and explain the project goal: a policy-enforcement gateway between agents and tools.
-2. Open `config/default_policy.json` and explain roles, permissions, approval actions, blocked tools, and thresholds.
-3. Open `examples/prompt_injection_image.json` and explain how untrusted content can influence an agent.
-4. Open `src/agent_security_gateway/models.py` and explain the request, provenance, finding, decision, and trace models.
-5. Open `src/agent_security_gateway/risk.py` and explain semantic risk scoring.
-6. Open `src/agent_security_gateway/policy.py` and explain least-privilege authorization.
-7. Open `src/agent_security_gateway/gateway.py` and show how policy and risk decisions are combined.
-8. Open `src/agent_security_gateway/approvals.py` and `telemetry.py` to explain human review and auditability.
-
-The short interview explanation:
-
-> This project models a policy-enforcement gateway for AI agents. Instead of letting an agent directly execute tools, every tool call becomes a structured request. The gateway evaluates traditional authorization through role permissions, then evaluates AI-specific semantic risk such as prompt injection, secret handling, low-trust provenance, and possible exfiltration. It returns allow, block, or require approval. It also writes audit traces and creates approval records for sensitive actions.
+Generated traces, approvals, and ledgers are ignored by git.
 
 ## Project Structure
 
 ```text
 agent-security-gateway/
   config/
-    default_policy.json # Role permissions, thresholds, approval actions
+    default_policy.json
   docs/
-    *.md                # Architecture roadmap and delegation model notes
+    architecture_roadmap.md
+    delegation_model.md
   examples/
-    *.json              # Sample agent tool-call requests and attacks
+    delegated_read_request.json
+    low_risk_read.json
+    mcp_delegated_read_call.json
+    mcp_low_risk_read_call.json
+    production_deploy.json
+    prompt_injection_image.json
+    secret_exfiltration.json
   src/agent_security_gateway/
-    approvals.py        # Pending approval records and resolution
+    approvals.py        # Approval records, bindings, and replay prevention
     authz_state.py      # Durable delegation authorization state
-    cli.py              # Command-line inspection workflow
-    envelopes.py        # Signed delegation envelopes
-    gateway.py          # Main policy enforcement flow
+    cli.py              # Command-line workflows
+    demo.py             # Runnable scenario demo
+    envelopes.py        # HMAC-signed delegation envelopes
+    gateway.py          # Main enforcement flow
     io.py               # JSON request loading helpers
     ledger.py           # Append-only decision ledger
     mcp_adapter.py      # MCP-style tool-call adapter
-    models.py           # Request, decision, provenance, and trace models
+    models.py           # Request, delegation, approval, decision, trace models
     policy.py           # Policy loading and evaluation
     risk.py             # Semantic and contextual risk scoring
     telemetry.py        # JSONL trace exporter
-    demo.py             # Runnable portfolio demo
   tests/
+    test_approval_binding_and_ledger.py
+    test_cli.py
+    test_delegation.py
     test_gateway.py
+    test_mcp_adapter.py
+    test_policy.py
 ```
 
-## Current Scope
+## Walkthrough Script
 
-This is intentionally a compact version 0.1. It does not call a real LLM or a live MCP server yet. Instead, it focuses on the security architecture that would sit between an agent runtime and real tools.
+If you are walking someone through the repo, use this order:
 
-Good next milestones:
+1. Start with the architecture diagram at the top of this README.
+2. Open `config/default_policy.json` and explain roles, permissions, approval actions, thresholds, and policy version.
+3. Open `examples/prompt_injection_image.json` and explain how untrusted content can influence an agent.
+4. Open `src/agent_security_gateway/models.py` and explain request, provenance, delegation, approval, decision, and trace models.
+5. Open `src/agent_security_gateway/risk.py` and explain semantic risk scoring.
+6. Open `src/agent_security_gateway/policy.py` and explain least-privilege authorization.
+7. Open `src/agent_security_gateway/envelopes.py` and `authz_state.py` to explain signed delegation and durable state.
+8. Open `src/agent_security_gateway/approvals.py` and explain approval binding and replay prevention.
+9. Open `src/agent_security_gateway/gateway.py` and show how controls are combined.
+10. Open `src/agent_security_gateway/mcp_adapter.py` and explain the MCP enforcement seam.
+11. Open `src/agent_security_gateway/telemetry.py` and `ledger.py` to explain reconstruction and attribution.
 
-- Export real OpenTelemetry spans.
-- Add taint tracking for retrieved content and memory writes.
-- Build a small dashboard for reviewing blocked and approved tool calls.
-- Add policy packs for AppSec, SOC, and software-engineering agents.
+Short interview explanation:
+
+> This project models a security gateway for AI agents. Every tool call becomes a structured request. The gateway validates delegated authority, checks role-based policy, scores semantic risk, binds approvals to exact actions, and records trace plus ledger evidence. It can also mediate MCP-style tool calls, executing handlers only after an allow decision. The goal is to show how AppSec concepts like least privilege, reference monitors, provenance, delegated authorization, approval gates, and audit reconstruction apply to agentic AI systems.
 
 ## Run Tests
+
+Windows PowerShell:
 
 ```powershell
 py -3 -m unittest discover -s tests
 ```
 
-On macOS/Linux:
+macOS/Linux:
 
 ```bash
 python3 -m unittest discover -s tests
 ```
+
+Current coverage includes gateway decisions, policy validation, CLI workflows, delegation envelopes, scope attenuation, revocation and expiry checks, approval binding, replay prevention, decision ledger context, MCP adapter behavior, and trace/ledger attribution.
+
+## Next Milestones
+
+- Export native OpenTelemetry spans.
+- Add taint tracking for retrieved content and memory writes.
+- Build a small dashboard for reviewing blocked and approved tool calls.
+- Add policy packs for AppSec, SOC, and software-engineering agents.
+- Replace the stubbed MCP adapter with a live MCP proxy/server integration.
