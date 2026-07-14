@@ -4,6 +4,7 @@ from pathlib import Path
 
 from .approvals import ApprovalStore
 from .gateway import AgentSecurityGateway
+from .ledger import DecisionLedger
 from .models import AgentRequest, Provenance
 from .policy import GatewayPolicy
 from .telemetry import JsonlTraceExporter
@@ -67,11 +68,13 @@ def run_demo(
     policy: GatewayPolicy | None = None,
     trace_path: Path = Path("traces/demo-traces.jsonl"),
     approval_dir: Path = Path("approvals"),
+    ledger_path: Path = Path("ledger/decisions.jsonl"),
 ) -> None:
     gateway = AgentSecurityGateway(
         policy=policy,
         trace_exporter=JsonlTraceExporter(trace_path),
         approval_store=ApprovalStore(approval_dir),
+        decision_ledger=DecisionLedger(ledger_path),
     )
 
     print("Agent Security Gateway demo\n")
@@ -86,6 +89,7 @@ def run_demo(
 
     print(f"Trace events written to {trace_path}")
     print(f"Approval records written to {approval_dir}")
+    print(f"Decision ledger written to {ledger_path}")
 
 
 def main() -> None:

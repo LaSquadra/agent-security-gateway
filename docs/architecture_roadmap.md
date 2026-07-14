@@ -60,3 +60,15 @@ Milestone 1 begins the control-plane model with:
 - Gateway validation for delegated requests
 
 This keeps the project dependency-light while making the next steps concrete.
+
+## Milestone 2 Status
+
+Milestone 2 adds approval binding and audit evidence:
+
+- Approvals bind to agent, tool, action, resource, delegation ID, and policy version.
+- Approved records are single-use by default.
+- A bound approval can convert a `require_approval` decision into `allow` only for the matching request.
+- Mismatched or already-consumed approvals produce a `block` decision.
+- `DecisionLedger` writes JSONL audit entries with delegation, approval, risk, and decision context.
+
+This gives the project the action-time evidence needed to answer: which scope was live, which approval applied, and what decision was made for that tool call?

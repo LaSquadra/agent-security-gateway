@@ -7,6 +7,7 @@ from .approvals import ApprovalStore
 from .demo import run_demo
 from .gateway import AgentSecurityGateway
 from .io import dump_json, load_request
+from .ledger import DecisionLedger
 from .policy import GatewayPolicy
 from .telemetry import JsonlTraceExporter
 
@@ -26,6 +27,9 @@ def main(argv: list[str] | None = None) -> int:
     demo_parser.add_argument(
         "--approval-dir", default="approvals", help="Directory for approval records."
     )
+    demo_parser.add_argument(
+        "--ledger-path", default="ledger/decisions.jsonl", help="Decision ledger JSONL output."
+    )
 
     inspect_parser = subparsers.add_parser(
         "inspect", help="Inspect one request JSON file."
@@ -37,6 +41,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     inspect_parser.add_argument(
         "--approval-dir", default="approvals", help="Directory for approval records."
+    )
+    inspect_parser.add_argument(
+        "--ledger-path", default="ledger/decisions.jsonl", help="Decision ledger JSONL output."
     )
 
     validate_parser = subparsers.add_parser(
@@ -56,7 +63,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "demo":
         policy = _load_policy(args.policy)
-        run_demo(policy, Path(args.trace_path), Path(args.approval_dir))
+        run_demo(policy, Path(args.trace_path), Path(args.approval_dir), Path(args.ledger_path))
         return 0
 
     if args.command == "inspect":
@@ -65,6 +72,7 @@ def main(argv: list[str] | None = None) -> int:
             policy=policy,
             trace_exporter=JsonlTraceExporter(args.trace_path),
             approval_store=ApprovalStore(args.approval_dir),
+            decision_ledger=DecisionLedger(args.ledger_path),
         )
         decision = gateway.inspect(load_request(args.request))
         print(dump_json(decision.to_dict()))

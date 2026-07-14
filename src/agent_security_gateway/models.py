@@ -193,6 +193,55 @@ class GatewayDecision:
 
 
 @dataclass(frozen=True)
+class ApprovalBinding:
+    agent_id: str
+    tool_name: str
+    action: str
+    resource: str | None = None
+    delegation_id: str | None = None
+    policy_version: str = "default"
+    max_uses: int = 1
+    uses: int = 0
+
+    @classmethod
+    def from_request(
+        cls, request: AgentRequest, policy_version: str = "default"
+    ) -> "ApprovalBinding":
+        return cls(
+            agent_id=request.agent_id,
+            tool_name=request.tool_name,
+            action=request.action,
+            resource=request.arguments.get("path") or request.arguments.get("resource"),
+            delegation_id=request.delegation.delegation_id if request.delegation else None,
+            policy_version=policy_version,
+        )
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "ApprovalBinding":
+        return cls(
+            agent_id=data["agent_id"],
+            tool_name=data["tool_name"],
+            action=data["action"],
+            resource=data.get("resource"),
+            delegation_id=data.get("delegation_id"),
+            policy_version=data.get("policy_version", "default"),
+            max_uses=int(data.get("max_uses", 1)),
+            uses=int(data.get("uses", 0)),
+        )
+
+    def matches(self, request: AgentRequest, policy_version: str = "default") -> bool:
+        candidate = ApprovalBinding.from_request(request, policy_version)
+        return (
+            self.agent_id == candidate.agent_id
+            and self.tool_name == candidate.tool_name
+            and self.action == candidate.action
+            and self.resource == candidate.resource
+            and self.delegation_id == candidate.delegation_id
+            and self.policy_version == candidate.policy_version
+        )
+
+
+@dataclass(frozen=True)
 class TraceEvent:
     trace_id: str
     span_id: str

@@ -28,6 +28,7 @@ class GatewayPolicy:
                     "run_tests",
                     "deploy",
                     "write_report",
+                    "send_external",
                 },
             },
             approval_actions={"deploy", "delete", "send_external", "execute_shell"},

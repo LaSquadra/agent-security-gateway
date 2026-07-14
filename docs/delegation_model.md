@@ -76,3 +76,44 @@ The envelope is the small object that travels with a request:
 ```
 
 The gateway validates signature, expiry, current delegation state, revocation epoch, agent identity, root principal, and scope before the normal policy and risk checks run.
+
+## Approval Binding
+
+When a request requires approval, the approval record stores a binding:
+
+```text
+agent_id
+tool_name
+action
+resource
+delegation_id
+policy_version
+max_uses
+uses
+```
+
+An approved record can only satisfy a future request when the binding matches exactly. This prevents an approval for `deployment/deploy` from being reused for `network/send_external`, and prevents a consumed approval from being replayed.
+
+## Decision Ledger
+
+Every inspected request can be written to an append-only ledger entry. The ledger records:
+
+```text
+request_id
+trace_id
+agent_id
+parent_agent_id
+root_principal
+delegation_id
+revocation_epoch
+approval_id
+tool_name
+action
+resource
+decision
+risk_score
+reasons
+risk_findings
+```
+
+Traces are useful for operational observability. The ledger is intended for audit reconstruction.

@@ -110,6 +110,10 @@ The project now includes an early control-plane model for delegated agent author
 
 The gateway can validate delegated requests by checking the envelope signature, expiry, current delegation state, revocation epoch, agent identity, root principal, and requested scope before normal policy and risk checks run.
 
+Approvals are now bound to the exact request context they approve: agent, tool, action, resource, delegation ID, and policy version. Approved records are single-use by default, so an approval for one action cannot be replayed against a different action or reused after consumption.
+
+The gateway can also write an append-only decision ledger to `ledger/decisions.jsonl`. The ledger captures the request ID, trace ID, delegation context, root principal, approval ID, risk findings, reasons, and final decision for audit reconstruction.
+
 See:
 
 - `docs/architecture_roadmap.md`
@@ -162,6 +166,7 @@ agent-security-gateway/
     envelopes.py        # Signed delegation envelopes
     gateway.py          # Main policy enforcement flow
     io.py               # JSON request loading helpers
+    ledger.py           # Append-only decision ledger
     models.py           # Request, decision, provenance, and trace models
     policy.py           # Policy loading and evaluation
     risk.py             # Semantic and contextual risk scoring
