@@ -49,7 +49,7 @@ The current implementation is dependency-light and uses local JSON/JSONL files s
 - Bundled policy packs model AppSec, SOC, and software-engineering agent profiles.
 - `build_dashboard` generates a static HTML view of decisions, approvals, traces, taint, delegation, and ledger evidence.
 
-This is not a production gateway yet. It does not run a real LLM, expose a live MCP server, or export native OpenTelemetry spans. It is an architecture lab showing where those integrations would fit.
+This is not a production gateway yet. It does not run a real LLM, expose a live MCP server, or send spans directly to an OpenTelemetry collector. It is an architecture lab showing where those integrations would fit.
 
 ## Quick Start
 
@@ -74,6 +74,7 @@ asg demo
 Run without installing:
 
 ```powershell
+$env:PYTHONPATH = "src"
 py -3 -m agent_security_gateway.cli demo
 ```
 
@@ -301,10 +302,15 @@ agent-security-gateway/
   tests/
     test_approval_binding_and_ledger.py
     test_cli.py
+    test_dashboard.py
     test_delegation.py
     test_gateway.py
     test_mcp_adapter.py
     test_policy.py
+    test_policy_packs.py
+    test_showcase.py
+    test_taint.py
+    test_telemetry_otlp.py
 ```
 
 ## Walkthrough Script
@@ -332,16 +338,18 @@ Short interview explanation:
 Windows PowerShell:
 
 ```powershell
+$env:PYTHONPATH = "src"
 py -3 -m unittest discover -s tests
 ```
 
 macOS/Linux:
 
 ```bash
+export PYTHONPATH=src
 python3 -m unittest discover -s tests
 ```
 
-Current coverage includes gateway decisions, policy validation, CLI workflows, delegation envelopes, scope attenuation, revocation and expiry checks, approval binding, replay prevention, decision ledger context, MCP adapter behavior, taint-sensitive flows, and trace/ledger attribution.
+Current coverage includes gateway decisions, policy validation, policy packs, CLI workflows, showcase and dashboard generation, delegation envelopes, scope attenuation, revocation and expiry checks, approval binding, replay prevention, decision ledger context, MCP adapter behavior, taint-sensitive flows, OTLP export, and trace/ledger attribution.
 
 ## Next Milestones
 
