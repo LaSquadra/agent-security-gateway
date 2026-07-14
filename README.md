@@ -98,6 +98,12 @@ asg inspect examples/production_deploy.json --policy config/default_policy.json
 asg resolve-approval <approval-id> approved --actor ryan
 ```
 
+Route an MCP-style tool call through the gateway:
+
+```powershell
+asg mcp-call examples/mcp_low_risk_read_call.json --policy config/default_policy.json
+```
+
 ## Delegation Roadmap
 
 The project now includes an early control-plane model for delegated agent authority:
@@ -113,6 +119,8 @@ The gateway can validate delegated requests by checking the envelope signature, 
 Approvals are now bound to the exact request context they approve: agent, tool, action, resource, delegation ID, and policy version. Approved records are single-use by default, so an approval for one action cannot be replayed against a different action or reused after consumption.
 
 The gateway can also write an append-only decision ledger to `ledger/decisions.jsonl`. The ledger captures the request ID, trace ID, delegation context, root principal, approval ID, risk findings, reasons, and final decision for audit reconstruction.
+
+The project also includes an MCP adapter stub. It accepts an MCP-like tool call, converts it into an `AgentRequest`, asks the gateway for a decision, and only invokes a registered tool handler when the decision is `allow`. This models where a real MCP proxy would enforce delegation, policy, risk, approval, and trace context before tool execution.
 
 See:
 
@@ -167,6 +175,7 @@ agent-security-gateway/
     gateway.py          # Main policy enforcement flow
     io.py               # JSON request loading helpers
     ledger.py           # Append-only decision ledger
+    mcp_adapter.py      # MCP-style tool-call adapter
     models.py           # Request, decision, provenance, and trace models
     policy.py           # Policy loading and evaluation
     risk.py             # Semantic and contextual risk scoring

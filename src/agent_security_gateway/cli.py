@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 from .approvals import ApprovalStore
@@ -8,6 +9,7 @@ from .demo import run_demo
 from .gateway import AgentSecurityGateway
 from .io import dump_json, load_request
 from .ledger import DecisionLedger
+from .mcp_adapter import McpGatewayAdapter, McpToolCall
 from .policy import GatewayPolicy
 from .telemetry import JsonlTraceExporter
 
@@ -46,6 +48,21 @@ def main(argv: list[str] | None = None) -> int:
         "--ledger-path", default="ledger/decisions.jsonl", help="Decision ledger JSONL output."
     )
 
+    mcp_parser = subparsers.add_parser(
+        "mcp-call", help="Route an MCP-style tool call through the gateway."
+    )
+    mcp_parser.add_argument("call", help="Path to an MCP-style tool-call JSON file.")
+    mcp_parser.add_argument("--policy", help="Path to a JSON policy file.")
+    mcp_parser.add_argument(
+        "--trace-path", default="traces/mcp-traces.jsonl", help="Trace JSONL output."
+    )
+    mcp_parser.add_argument(
+        "--approval-dir", default="approvals", help="Directory for approval records."
+    )
+    mcp_parser.add_argument(
+        "--ledger-path", default="ledger/decisions.jsonl", help="Decision ledger JSONL output."
+    )
+
     validate_parser = subparsers.add_parser(
         "validate-policy", help="Validate a JSON policy file."
     )
@@ -78,6 +95,21 @@ def main(argv: list[str] | None = None) -> int:
         print(dump_json(decision.to_dict()))
         return 0
 
+    if args.command == "mcp-call":
+        policy = _load_policy(args.policy)
+        gateway = AgentSecurityGateway(
+            policy=policy,
+            trace_exporter=JsonlTraceExporter(args.trace_path),
+            approval_store=ApprovalStore(args.approval_dir),
+            decision_ledger=DecisionLedger(args.ledger_path),
+        )
+        adapter = McpGatewayAdapter(gateway, tools=_demo_tools())
+        with Path(args.call).open("r", encoding="utf-8") as call_file:
+            call = McpToolCall.from_dict(json.load(call_file))
+        result = adapter.handle_tool_call(call)
+        print(dump_json(result.to_dict()))
+        return 0
+
     if args.command == "validate-policy":
         policy = GatewayPolicy.load(args.policy)
         errors = policy.validate()
@@ -106,6 +138,14 @@ def _load_policy(path: str | None) -> GatewayPolicy:
     if default_path.exists():
         return GatewayPolicy.load(default_path)
     return GatewayPolicy.default()
+
+
+def _demo_tools():
+    return {
+        "filesystem.read_file": lambda arguments: {
+            "content": f"simulated read of {arguments.get('path', '<missing path>')}"
+        }
+    }
 
 
 if __name__ == "__main__":

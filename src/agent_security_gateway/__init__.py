@@ -2,6 +2,7 @@
 
 from .gateway import AgentSecurityGateway
 from .ledger import DecisionLedger
+from .mcp_adapter import McpGatewayAdapter, McpToolCall, McpToolResult
 from .models import (
     AgentRequest,
     ApprovalBinding,
@@ -22,4 +23,7 @@ __all__ = [
     "DelegationScope",
     "DelegationState",
     "GatewayPolicy",
+    "McpGatewayAdapter",
+    "McpToolCall",
+    "McpToolResult",
 ]

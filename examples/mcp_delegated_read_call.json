@@ -1,0 +1,28 @@
+{
+  "call_id": "mcp-call-read-1",
+  "agent_id": "agent-child-7",
+  "role": "researcher",
+  "tool_name": "filesystem",
+  "action": "read_file",
+  "arguments": {
+    "path": "README.md"
+  },
+  "user_intent": "Read project documentation through an MCP-style tool call.",
+  "provenance": {
+    "source": "parent-agent",
+    "trust_level": "trusted",
+    "session_id": "session-demo-1"
+  },
+  "delegation": {
+    "delegation_id": "dlg-child-demo",
+    "agent_id": "agent-child-7",
+    "parent_agent_id": "agent-root-1",
+    "root_principal": "user:ryan",
+    "scope_ref": "scope-child-read",
+    "approval_ref": null,
+    "revocation_epoch": 0,
+    "expires_at": "2099-01-01T00:00:00Z",
+    "trace_id": "trace-demo-mcp-read",
+    "signature": "example-signature-generated-at-runtime"
+  }
+}

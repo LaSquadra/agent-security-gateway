@@ -117,3 +117,13 @@ risk_findings
 ```
 
 Traces are useful for operational observability. The ledger is intended for audit reconstruction.
+
+## MCP Hop
+
+The MCP adapter stub models a gateway hop between an agent and a tool server:
+
+```text
+MCP-style tool call -> McpGatewayAdapter -> AgentSecurityGateway -> tool handler
+```
+
+The adapter preserves the delegation envelope and uses the MCP call ID as the gateway request ID. If the gateway returns `block` or `require_approval`, the adapter does not execute the handler. If the gateway returns `allow`, the adapter invokes the registered handler and returns the simulated tool result.

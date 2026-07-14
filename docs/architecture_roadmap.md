@@ -72,3 +72,15 @@ Milestone 2 adds approval binding and audit evidence:
 - `DecisionLedger` writes JSONL audit entries with delegation, approval, risk, and decision context.
 
 This gives the project the action-time evidence needed to answer: which scope was live, which approval applied, and what decision was made for that tool call?
+
+## Milestone 3 Status
+
+Milestone 3 adds an MCP adapter stub:
+
+- `McpToolCall` models an MCP-style tool invocation.
+- `McpGatewayAdapter` converts tool calls into `AgentRequest` objects.
+- The adapter executes registered handlers only after an `allow` decision.
+- Blocked or approval-required calls do not execute.
+- Delegation trace IDs and parent-agent context are preserved in the decision ledger.
+
+This is not a full MCP server yet. It is the integration seam where a real MCP proxy can be added later.
