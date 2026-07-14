@@ -84,3 +84,16 @@ Milestone 3 adds an MCP adapter stub:
 - Delegation trace IDs and parent-agent context are preserved in the decision ledger.
 
 This is not a full MCP server yet. It is the integration seam where a real MCP proxy can be added later.
+
+## Milestone 4 Status
+
+Milestone 4 strengthens reconstruction and attribution:
+
+- Policies now carry a `policy_version`.
+- Gateway decisions include the policy version used for evaluation.
+- Approval bindings and decision ledger entries record policy version.
+- Trace IDs use the delegation envelope trace ID when present.
+- Trace events include request, trace, delegation, parent-agent, root-principal, revocation, approval, and policy metadata.
+- Tests verify that MCP trace events and decision ledger entries share the same attribution context.
+
+This gives the project a clearer answer to post-incident questions: who acted, through which delegation chain, under which policy, with which approval, against which resource, and what decision was made?

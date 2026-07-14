@@ -14,10 +14,23 @@ class JsonlTraceExporter:
 
     def emit_decision(self, request: AgentRequest, decision: GatewayDecision) -> None:
         root_span_id = str(uuid4())
+        trace_id = _trace_id(request)
         events = [
-            self._event(request, root_span_id, None, "request_received", "ok", 0, {}),
             self._event(
                 request,
+                decision,
+                trace_id,
+                root_span_id,
+                None,
+                "request_received",
+                "ok",
+                0,
+                {},
+            ),
+            self._event(
+                request,
+                decision,
+                trace_id,
                 str(uuid4()),
                 root_span_id,
                 "risk_scored",
@@ -32,6 +45,8 @@ class JsonlTraceExporter:
             ),
             self._event(
                 request,
+                decision,
+                trace_id,
                 str(uuid4()),
                 root_span_id,
                 "policy_evaluated",
@@ -41,6 +56,8 @@ class JsonlTraceExporter:
             ),
             self._event(
                 request,
+                decision,
+                trace_id,
                 str(uuid4()),
                 root_span_id,
                 "decision_emitted",
@@ -60,6 +77,8 @@ class JsonlTraceExporter:
     def _event(
         self,
         request: AgentRequest,
+        decision: GatewayDecision,
+        trace_id: str,
         span_id: str,
         parent_span_id: str | None,
         event_type: str,
@@ -68,7 +87,7 @@ class JsonlTraceExporter:
         extra_attributes: dict,
     ) -> TraceEvent:
         event = TraceEvent(
-            trace_id=request.request_id,
+            trace_id=trace_id,
             span_id=span_id,
             parent_span_id=parent_span_id,
             name=f"agent_security_gateway.{event_type}",
@@ -76,13 +95,38 @@ class JsonlTraceExporter:
             duration_ms=duration_ms,
             status=status,
             attributes={
+                "request.id": request.request_id,
+                "trace.id": trace_id,
                 "agent.id": request.agent_id,
                 "agent.role": request.role,
                 "tool.name": request.tool_name,
                 "tool.action": request.action,
+                "policy.version": decision.policy_version,
+                "approval.id": decision.approval_id,
                 "provenance.source": request.provenance.source,
                 "provenance.trust_level": request.provenance.trust_level,
+                **_delegation_attributes(request),
                 **extra_attributes,
             },
         )
         return event
+
+
+def _trace_id(request: AgentRequest) -> str:
+    return request.delegation.trace_id if request.delegation else request.request_id
+
+
+def _delegation_attributes(request: AgentRequest) -> dict:
+    if not request.delegation:
+        return {
+            "delegation.id": None,
+            "delegation.parent_agent_id": None,
+            "delegation.root_principal": None,
+            "delegation.revocation_epoch": None,
+        }
+    return {
+        "delegation.id": request.delegation.delegation_id,
+        "delegation.parent_agent_id": request.delegation.parent_agent_id,
+        "delegation.root_principal": request.delegation.root_principal,
+        "delegation.revocation_epoch": request.delegation.revocation_epoch,
+    }

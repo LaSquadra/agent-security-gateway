@@ -10,6 +10,7 @@ from .models import AgentRequest, Decision
 
 @dataclass(frozen=True)
 class GatewayPolicy:
+    policy_version: str = "default-v1"
     role_permissions: dict[str, set[str]] = field(default_factory=dict)
     approval_actions: set[str] = field(default_factory=set)
     blocked_tools: set[str] = field(default_factory=set)
@@ -42,6 +43,7 @@ class GatewayPolicy:
             for role, actions in data.get("role_permissions", {}).items()
         }
         return cls(
+            policy_version=data.get("policy_version", "default-v1"),
             role_permissions=role_permissions,
             approval_actions=set(data.get("approval_actions", [])),
             blocked_tools=set(data.get("blocked_tools", [])),

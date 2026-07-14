@@ -14,6 +14,7 @@ from agent_security_gateway.models import (
     DelegationState,
     Provenance,
 )
+from agent_security_gateway.telemetry import JsonlTraceExporter
 
 
 class McpGatewayAdapterTests(unittest.TestCase):
@@ -23,10 +24,12 @@ class McpGatewayAdapterTests(unittest.TestCase):
         self.store = AuthorizationStateStore(root / "delegations")
         self.signer = EnvelopeSigner("test-secret")
         self.ledger_path = root / "ledger" / "decisions.jsonl"
+        self.trace_path = root / "traces" / "events.jsonl"
         self.gateway = AgentSecurityGateway(
             authz_store=self.store,
             envelope_signer=self.signer,
             decision_ledger=DecisionLedger(self.ledger_path),
+            trace_exporter=JsonlTraceExporter(self.trace_path),
         )
         self.executions: list[dict] = []
         self.adapter = McpGatewayAdapter(
@@ -64,6 +67,31 @@ class McpGatewayAdapterTests(unittest.TestCase):
         self.assertEqual(entries[0]["request_id"], "mcp-call-1")
         self.assertEqual(entries[0]["trace_id"], "trace-mcp-1")
         self.assertEqual(entries[0]["parent_agent_id"], "agent-root-1")
+        self.assertEqual(entries[0]["policy_version"], "default-v1")
+
+    def test_mcp_trace_and_ledger_share_attribution_context(self) -> None:
+        self.adapter.handle_tool_call(self._call())
+        ledger_entry = json.loads(
+            self.ledger_path.read_text(encoding="utf-8").splitlines()[0]
+        )
+        trace_events = [
+            json.loads(line)
+            for line in self.trace_path.read_text(encoding="utf-8").splitlines()
+        ]
+        decision_event = trace_events[-1]
+        attrs = decision_event["attributes"]
+
+        self.assertEqual(decision_event["trace_id"], ledger_entry["trace_id"])
+        self.assertEqual(attrs["request.id"], ledger_entry["request_id"])
+        self.assertEqual(attrs["trace.id"], ledger_entry["trace_id"])
+        self.assertEqual(attrs["delegation.id"], ledger_entry["delegation_id"])
+        self.assertEqual(
+            attrs["delegation.parent_agent_id"], ledger_entry["parent_agent_id"]
+        )
+        self.assertEqual(
+            attrs["delegation.root_principal"], ledger_entry["root_principal"]
+        )
+        self.assertEqual(attrs["policy.version"], ledger_entry["policy_version"])
 
     def test_blocked_mcp_call_does_not_execute_tool(self) -> None:
         call = self._call(action="write_file")

@@ -12,6 +12,7 @@ class GatewayPolicyTests(unittest.TestCase):
         self.assertIn("developer", policy.role_permissions)
         self.assertIn("deploy", policy.approval_actions)
         self.assertEqual(policy.block_risk_at, 80)
+        self.assertEqual(policy.policy_version, "default-v1")
 
     def test_validate_rejects_bad_threshold_order(self) -> None:
         policy = GatewayPolicy.from_dict(
@@ -33,6 +34,7 @@ class GatewayPolicyTests(unittest.TestCase):
                   "role_permissions": {"analyst": ["read_file"]},
                   "approval_actions": [],
                   "blocked_tools": [],
+                  "policy_version": "test-policy-v2",
                   "block_risk_at": 90,
                   "require_approval_risk_at": 40
                 }
@@ -43,6 +45,7 @@ class GatewayPolicyTests(unittest.TestCase):
             policy = GatewayPolicy.load(path)
 
         self.assertEqual(policy.role_permissions["analyst"], {"read_file"})
+        self.assertEqual(policy.policy_version, "test-policy-v2")
 
 
 if __name__ == "__main__":

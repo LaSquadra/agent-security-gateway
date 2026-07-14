@@ -122,6 +122,28 @@ The gateway can also write an append-only decision ledger to `ledger/decisions.j
 
 The project also includes an MCP adapter stub. It accepts an MCP-like tool call, converts it into an `AgentRequest`, asks the gateway for a decision, and only invokes a registered tool handler when the decision is `allow`. This models where a real MCP proxy would enforce delegation, policy, risk, approval, and trace context before tool execution.
 
+## Observability Model
+
+Trace events and ledger entries are designed to support reconstruction and attribution.
+
+Operational traces are written as JSONL events such as `request_received`, `risk_scored`, `policy_evaluated`, and `decision_emitted`. For delegated calls, the trace ID comes from the delegation envelope, so the same trace can follow an agent, sub-agent, and MCP-style tool hop.
+
+Each trace event includes attribution fields such as:
+
+- `request.id`
+- `trace.id`
+- `agent.id`
+- `tool.name`
+- `tool.action`
+- `delegation.id`
+- `delegation.parent_agent_id`
+- `delegation.root_principal`
+- `delegation.revocation_epoch`
+- `approval.id`
+- `policy.version`
+
+The decision ledger records the same core identifiers plus risk findings, reasons, resource, and final decision. The intent is that traces help with operational debugging, while the ledger provides durable audit evidence for answering who acted, under which delegated authority, against which resource, under which policy version, and with what result.
+
 See:
 
 - `docs/architecture_roadmap.md`
@@ -191,7 +213,6 @@ This is intentionally a compact version 0.1. It does not call a real LLM or a li
 
 Good next milestones:
 
-- Add an MCP-compatible adapter.
 - Export real OpenTelemetry spans.
 - Add taint tracking for retrieved content and memory writes.
 - Build a small dashboard for reviewing blocked and approved tool calls.

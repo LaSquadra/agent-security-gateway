@@ -20,6 +20,7 @@ class DecisionLedgerEntry:
     delegation_id: str | None
     revocation_epoch: int | None
     approval_id: str | None
+    policy_version: str
     tool_name: str
     action: str
     resource: str | None
@@ -46,6 +47,7 @@ class DecisionLedger:
             delegation_id=delegation.delegation_id if delegation else None,
             revocation_epoch=delegation.revocation_epoch if delegation else None,
             approval_id=decision.approval_id,
+            policy_version=decision.policy_version,
             tool_name=request.tool_name,
             action=request.action,
             resource=request_resource(request.arguments),

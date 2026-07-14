@@ -36,7 +36,9 @@ class ApprovalStore:
             created_at=_now(),
             request=request.to_dict(),
             decision=decision.to_dict(),
-            binding=asdict(ApprovalBinding.from_request(request)),
+            binding=asdict(
+                ApprovalBinding.from_request(request, decision.policy_version)
+            ),
             history=[{"status": "pending", "changed_at": _now(), "actor": "gateway"}],
         )
         path = self._path(decision.approval_id)
@@ -62,7 +64,7 @@ class ApprovalStore:
         self,
         approval_id: str,
         request: AgentRequest,
-        policy_version: str = "default",
+        policy_version: str = "default-v1",
     ) -> tuple[bool, str]:
         path = self._path(approval_id)
         if not path.exists():

@@ -51,7 +51,7 @@ class AgentSecurityGateway:
             and self.approval_store
         ):
             approval_ok, approval_reason = self.approval_store.validate_and_consume(
-                approval_ref, request
+                approval_ref, request, self.policy.policy_version
             )
             reasons.append(approval_reason)
             final_decision = Decision.ALLOW if approval_ok else Decision.BLOCK
@@ -68,6 +68,7 @@ class AgentSecurityGateway:
             reasons=reasons,
             findings=findings,
             approval_id=approval_id or consumed_approval_id,
+            policy_version=self.policy.policy_version,
         )
 
         if self.trace_exporter:

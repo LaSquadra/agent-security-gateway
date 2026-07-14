@@ -1,4 +1,5 @@
 {
+  "policy_version": "default-v1",
   "role_permissions": {
     "researcher": ["read_file", "search_web", "write_report"],
     "developer": ["read_file", "write_file", "run_tests", "write_report"],

@@ -104,6 +104,7 @@ class ApprovalBindingAndLedgerTests(unittest.TestCase):
         self.assertEqual(entries[0]["root_principal"], "user:ryan")
         self.assertEqual(entries[0]["decision"], "require_approval")
         self.assertEqual(entries[0]["tool_name"], "deployment")
+        self.assertEqual(entries[0]["policy_version"], "default-v1")
 
     def _deploy_request(
         self,

@@ -195,6 +195,7 @@ class GatewayDecision:
     reasons: list[str]
     findings: list[RiskFinding]
     approval_id: str | None = None
+    policy_version: str = "default-v1"
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
@@ -209,13 +210,13 @@ class ApprovalBinding:
     action: str
     resource: str | None = None
     delegation_id: str | None = None
-    policy_version: str = "default"
+    policy_version: str = "default-v1"
     max_uses: int = 1
     uses: int = 0
 
     @classmethod
     def from_request(
-        cls, request: AgentRequest, policy_version: str = "default"
+        cls, request: AgentRequest, policy_version: str = "default-v1"
     ) -> "ApprovalBinding":
         return cls(
             agent_id=request.agent_id,
@@ -234,12 +235,12 @@ class ApprovalBinding:
             action=data["action"],
             resource=data.get("resource"),
             delegation_id=data.get("delegation_id"),
-            policy_version=data.get("policy_version", "default"),
+            policy_version=data.get("policy_version", "default-v1"),
             max_uses=int(data.get("max_uses", 1)),
             uses=int(data.get("uses", 0)),
         )
 
-    def matches(self, request: AgentRequest, policy_version: str = "default") -> bool:
+    def matches(self, request: AgentRequest, policy_version: str = "default-v1") -> bool:
         candidate = ApprovalBinding.from_request(request, policy_version)
         return (
             self.agent_id == candidate.agent_id
