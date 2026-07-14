@@ -98,6 +98,23 @@ asg inspect examples/production_deploy.json --policy config/default_policy.json
 asg resolve-approval <approval-id> approved --actor ryan
 ```
 
+## Delegation Roadmap
+
+The project now includes an early control-plane model for delegated agent authority:
+
+- `DelegationState` stores durable authority outside prompts and memory.
+- `DelegationScope` limits which tools, actions, and resources an agent may use.
+- `DelegationEnvelope` carries signed action-time authority with each delegated request.
+- `AuthorizationStateStore` persists delegation records and revocation state.
+- `EnvelopeSigner` signs and verifies envelopes using standard-library HMAC.
+
+The gateway can validate delegated requests by checking the envelope signature, expiry, current delegation state, revocation epoch, agent identity, root principal, and requested scope before normal policy and risk checks run.
+
+See:
+
+- `docs/architecture_roadmap.md`
+- `docs/delegation_model.md`
+
 ## What The Demo Shows
 
 The demo sends several simulated agent tool requests through the gateway:
@@ -134,11 +151,15 @@ The short interview explanation:
 agent-security-gateway/
   config/
     default_policy.json # Role permissions, thresholds, approval actions
+  docs/
+    *.md                # Architecture roadmap and delegation model notes
   examples/
     *.json              # Sample agent tool-call requests and attacks
   src/agent_security_gateway/
     approvals.py        # Pending approval records and resolution
+    authz_state.py      # Durable delegation authorization state
     cli.py              # Command-line inspection workflow
+    envelopes.py        # Signed delegation envelopes
     gateway.py          # Main policy enforcement flow
     io.py               # JSON request loading helpers
     models.py           # Request, decision, provenance, and trace models
