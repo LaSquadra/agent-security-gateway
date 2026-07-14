@@ -20,6 +20,14 @@ class CliTests(unittest.TestCase):
 
         self.assertEqual(result, 0)
 
+    def test_showcase_command_can_generate_dashboard(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            result = _run_cli(["showcase", "--output-dir", temp_dir, "--dashboard"])
+            dashboard_exists = (Path(temp_dir) / "dashboard.html").exists()
+
+        self.assertEqual(result, 0)
+        self.assertTrue(dashboard_exists)
+
     def test_inspect_command_writes_trace_and_approval_record(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             trace_path = Path(temp_dir) / "trace.jsonl"

@@ -137,3 +137,14 @@ Milestone 7 adds a narrative showcase:
 - Tests verify that the showcase runs and produces expected artifacts.
 
 This gives the project a human-friendly demonstration path separate from the test suite.
+
+## Milestone 8 Status
+
+Milestone 8 adds policy packs and dashboard output:
+
+- Bundled policy packs cover AppSec, SOC, and software-engineering agent profiles.
+- CLI commands can list policy packs and run inspection/showcase flows with a named pack.
+- `build_dashboard` generates a static HTML dashboard from ledger, approval, trace, and OTLP artifacts.
+- `asg showcase --dashboard` produces demo artifacts and `dashboard.html` in one command.
+
+This gives the project both reusable policy profiles and a reviewer-friendly visual artifact.

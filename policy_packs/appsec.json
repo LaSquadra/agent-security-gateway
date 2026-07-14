@@ -1,0 +1,12 @@
+{
+  "policy_version": "appsec-v1",
+  "role_permissions": {
+    "appsec_reviewer": ["read_file", "search_web", "write_report", "run_tests"],
+    "secure_coder": ["read_file", "write_file", "run_tests", "write_report"],
+    "release_manager": ["read_file", "run_tests", "deploy", "write_report"]
+  },
+  "approval_actions": ["deploy", "delete", "send_external", "execute_shell", "write_file"],
+  "blocked_tools": ["raw_shell"],
+  "block_risk_at": 75,
+  "require_approval_risk_at": 45
+}

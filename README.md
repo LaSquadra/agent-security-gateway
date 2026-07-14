@@ -46,6 +46,8 @@ The current implementation is dependency-light and uses local JSON/JSONL files s
 - `OtlpJsonTraceExporter` emits OTLP/HTTP-compatible JSON span payloads.
 - `McpGatewayAdapter` converts MCP-style tool calls into gateway-inspected requests and only executes handlers after an `allow` decision.
 - Taint labels on provenance model untrusted retrieved content, prompt-injection risk, secrets, credentials, or untrusted code.
+- Bundled policy packs model AppSec, SOC, and software-engineering agent profiles.
+- `build_dashboard` generates a static HTML view of decisions, approvals, traces, taint, delegation, and ledger evidence.
 
 This is not a production gateway yet. It does not run a real LLM, expose a live MCP server, or export native OpenTelemetry spans. It is an architecture lab showing where those integrations would fit.
 
@@ -96,6 +98,12 @@ It runs a curated sequence:
 
 The showcase prints a compact table and writes reviewable artifacts to `showcase_output/`.
 
+Generate a dashboard as part of the showcase:
+
+```powershell
+asg showcase --dashboard
+```
+
 ## CLI Workflow
 
 Validate the default policy:
@@ -127,6 +135,24 @@ Write OTLP-compatible JSON spans instead of JSONL traces:
 
 ```powershell
 asg inspect examples/low_risk_read.json --trace-format otlp-json --trace-path traces/otlp-traces.json
+```
+
+List bundled policy packs:
+
+```powershell
+asg policy-packs
+```
+
+Use a named policy pack:
+
+```powershell
+asg inspect examples/low_risk_read.json --policy-pack software_engineering
+```
+
+Build a static dashboard from generated artifacts:
+
+```powershell
+asg dashboard --artifact-dir showcase_output
 ```
 
 ## Core Flow
@@ -238,6 +264,10 @@ Generated traces, approvals, and ledgers are ignored by git.
 agent-security-gateway/
   config/
     default_policy.json
+  policy_packs/
+    appsec.json
+    software_engineering.json
+    soc.json
   docs/
     architecture_roadmap.md
     delegation_model.md
@@ -254,6 +284,7 @@ agent-security-gateway/
     approvals.py        # Approval records, bindings, and replay prevention
     authz_state.py      # Durable delegation authorization state
     cli.py              # Command-line workflows
+    dashboard.py        # Static artifact dashboard generator
     demo.py             # Runnable scenario demo
     envelopes.py        # HMAC-signed delegation envelopes
     gateway.py          # Main enforcement flow
@@ -262,6 +293,7 @@ agent-security-gateway/
     mcp_adapter.py      # MCP-style tool-call adapter
     models.py           # Request, delegation, approval, decision, trace models
     policy.py           # Policy loading and evaluation
+    policy_packs.py     # Bundled policy pack loading
     risk.py             # Semantic and contextual risk scoring
     showcase.py         # Narrative portfolio demo
     taint.py            # Helpers for adding taint labels
@@ -315,6 +347,5 @@ Current coverage includes gateway decisions, policy validation, CLI workflows, d
 
 - Send OTLP spans directly to a collector endpoint.
 - Extend taint tracking into memory writes and retrieved-document stores.
-- Build a small dashboard for reviewing blocked and approved tool calls.
-- Add policy packs for AppSec, SOC, and software-engineering agents.
+- Send generated dashboards to a hosted static site or CI artifact.
 - Replace the stubbed MCP adapter with a live MCP proxy/server integration.

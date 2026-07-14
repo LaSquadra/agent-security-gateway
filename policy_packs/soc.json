@@ -1,0 +1,12 @@
+{
+  "policy_version": "soc-v1",
+  "role_permissions": {
+    "soc_analyst": ["read_file", "search_web", "write_report"],
+    "incident_responder": ["read_file", "search_web", "write_report", "send_external"],
+    "soc_manager": ["read_file", "search_web", "write_report", "send_external"]
+  },
+  "approval_actions": ["send_external", "delete", "execute_shell", "deploy"],
+  "blocked_tools": ["raw_shell", "deployment"],
+  "block_risk_at": 70,
+  "require_approval_risk_at": 40
+}

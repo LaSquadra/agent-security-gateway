@@ -5,12 +5,14 @@ import json
 from pathlib import Path
 
 from .approvals import ApprovalStore
+from .dashboard import build_dashboard
 from .demo import run_demo
 from .gateway import AgentSecurityGateway
 from .io import dump_json, load_request
 from .ledger import DecisionLedger
 from .mcp_adapter import McpGatewayAdapter, McpToolCall
 from .policy import GatewayPolicy
+from .policy_packs import list_policy_packs, load_policy_pack
 from .showcase import run_showcase
 from .telemetry import JsonlTraceExporter, OtlpJsonTraceExporter
 
@@ -49,12 +51,32 @@ def main(argv: list[str] | None = None) -> int:
         help="Directory for showcase traces, approvals, ledgers, and OTLP output.",
     )
     showcase_parser.add_argument("--policy", help="Path to a JSON policy file.")
+    showcase_parser.add_argument(
+        "--dashboard",
+        action="store_true",
+        help="Generate dashboard.html in the showcase output directory.",
+    )
+
+    dashboard_parser = subparsers.add_parser(
+        "dashboard", help="Build a static HTML dashboard from generated artifacts."
+    )
+    dashboard_parser.add_argument(
+        "--artifact-dir",
+        default="showcase_output",
+        help="Directory containing showcase or gateway artifacts.",
+    )
+    dashboard_parser.add_argument(
+        "--output",
+        help="Output HTML path. Defaults to <artifact-dir>/dashboard.html.",
+    )
+    showcase_parser.add_argument("--policy-pack", help="Named policy pack to use.")
 
     inspect_parser = subparsers.add_parser(
         "inspect", help="Inspect one request JSON file."
     )
     inspect_parser.add_argument("request", help="Path to an agent request JSON file.")
     inspect_parser.add_argument("--policy", help="Path to a JSON policy file.")
+    inspect_parser.add_argument("--policy-pack", help="Named policy pack to use.")
     inspect_parser.add_argument(
         "--trace-path", default="traces/inspect-traces.jsonl", help="Trace JSONL output."
     )
@@ -76,6 +98,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     mcp_parser.add_argument("call", help="Path to an MCP-style tool-call JSON file.")
     mcp_parser.add_argument("--policy", help="Path to a JSON policy file.")
+    mcp_parser.add_argument("--policy-pack", help="Named policy pack to use.")
     mcp_parser.add_argument(
         "--trace-path", default="traces/mcp-traces.jsonl", help="Trace JSONL output."
     )
@@ -96,6 +119,13 @@ def main(argv: list[str] | None = None) -> int:
         "validate-policy", help="Validate a JSON policy file."
     )
     validate_parser.add_argument("policy", help="Path to a JSON policy file.")
+
+    packs_parser = subparsers.add_parser("policy-packs", help="List bundled policy packs.")
+    packs_parser.add_argument(
+        "--directory",
+        default="policy_packs",
+        help="Directory containing policy pack JSON files.",
+    )
 
     approval_parser = subparsers.add_parser(
         "resolve-approval", help="Approve or deny a pending approval record."
@@ -119,11 +149,19 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "showcase":
-        run_showcase(Path(args.output_dir), _load_policy(args.policy))
+        run_showcase(Path(args.output_dir), _load_policy(args.policy, args.policy_pack))
+        if args.dashboard:
+            dashboard_path = build_dashboard(args.output_dir)
+            print(f"Dashboard written to {dashboard_path}")
+        return 0
+
+    if args.command == "dashboard":
+        dashboard_path = build_dashboard(args.artifact_dir, args.output)
+        print(f"Dashboard written to {dashboard_path}")
         return 0
 
     if args.command == "inspect":
-        policy = _load_policy(args.policy)
+        policy = _load_policy(args.policy, args.policy_pack)
         gateway = AgentSecurityGateway(
             policy=policy,
             trace_exporter=_trace_exporter(args.trace_path, args.trace_format),
@@ -135,7 +173,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "mcp-call":
-        policy = _load_policy(args.policy)
+        policy = _load_policy(args.policy, args.policy_pack)
         gateway = AgentSecurityGateway(
             policy=policy,
             trace_exporter=_trace_exporter(args.trace_path, args.trace_format),
@@ -159,6 +197,17 @@ def main(argv: list[str] | None = None) -> int:
         print("Policy is valid.")
         return 0
 
+    if args.command == "policy-packs":
+        packs = list_policy_packs(args.directory)
+        if not packs:
+            print("No policy packs found.")
+            return 1
+        for pack in packs:
+            policy = GatewayPolicy.load(pack)
+            status = "valid" if not policy.validate() else "invalid"
+            print(f"{pack.stem}: {policy.policy_version} ({status})")
+        return 0
+
     if args.command == "resolve-approval":
         path = ApprovalStore(args.approval_dir).resolve(
             args.approval_id, args.status, args.actor
@@ -170,7 +219,11 @@ def main(argv: list[str] | None = None) -> int:
     return 2
 
 
-def _load_policy(path: str | None) -> GatewayPolicy:
+def _load_policy(path: str | None, pack: str | None = None) -> GatewayPolicy:
+    if path and pack:
+        raise ValueError("Use either --policy or --policy-pack, not both.")
+    if pack:
+        return load_policy_pack(pack)
     if path:
         return GatewayPolicy.load(path)
     default_path = Path("config/default_policy.json")
