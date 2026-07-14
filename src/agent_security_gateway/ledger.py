@@ -24,6 +24,9 @@ class DecisionLedgerEntry:
     tool_name: str
     action: str
     resource: str | None
+    provenance_source: str
+    provenance_trust_level: str
+    provenance_taint_labels: list[str]
     decision: str
     risk_score: int
     reasons: list[str]
@@ -51,6 +54,9 @@ class DecisionLedger:
             tool_name=request.tool_name,
             action=request.action,
             resource=request_resource(request.arguments),
+            provenance_source=request.provenance.source,
+            provenance_trust_level=request.provenance.trust_level,
+            provenance_taint_labels=request.provenance.taint_labels,
             decision=decision.decision.value,
             risk_score=decision.risk_score,
             reasons=decision.reasons,

@@ -27,7 +27,7 @@ This project demonstrates how familiar security concepts map onto agent systems:
 - Prompt-injection and exfiltration risk scoring
 - Human approval gates
 - Approval binding and replay prevention
-- Provenance tracking
+- Provenance and taint tracking
 - MCP-style tool-call mediation
 - Trace correlation and append-only decision evidence
 
@@ -44,6 +44,7 @@ The current implementation is dependency-light and uses local JSON/JSONL files s
 - `DecisionLedger` writes append-only audit entries for reconstruction.
 - `JsonlTraceExporter` emits OpenTelemetry-shaped JSONL trace events.
 - `McpGatewayAdapter` converts MCP-style tool calls into gateway-inspected requests and only executes handlers after an `allow` decision.
+- Taint labels on provenance model untrusted retrieved content, prompt-injection risk, secrets, credentials, or untrusted code.
 
 This is not a production gateway yet. It does not run a real LLM, expose a live MCP server, or export native OpenTelemetry spans. It is an architecture lab showing where those integrations would fit.
 
@@ -170,6 +171,19 @@ Trace events include attribution fields such as:
 
 The decision ledger records the same core identifiers plus risk findings, reasons, resource, and final decision. Traces are for operational debugging; the ledger is for durable audit reconstruction.
 
+## Taint Tracking
+
+`Provenance` can carry `taint_labels` that describe risk inherited from retrieved content, uploads, web pages, or memory.
+
+Current high-risk labels include:
+
+- `prompt_injection`
+- `secret`
+- `credential`
+- `untrusted_code`
+
+The risk engine raises risk when tainted data flows into sensitive actions such as `send_external`, `write_file`, `deploy`, or `execute_shell`. Trace events and decision ledger entries both record taint labels so suspicious flows can be reconstructed later.
+
 ## What The Demo Shows
 
 The demo sends several simulated agent tool requests through the gateway:
@@ -207,6 +221,7 @@ agent-security-gateway/
     production_deploy.json
     prompt_injection_image.json
     secret_exfiltration.json
+    tainted_external_send.json
   src/agent_security_gateway/
     approvals.py        # Approval records, bindings, and replay prevention
     authz_state.py      # Durable delegation authorization state
@@ -220,6 +235,7 @@ agent-security-gateway/
     models.py           # Request, delegation, approval, decision, trace models
     policy.py           # Policy loading and evaluation
     risk.py             # Semantic and contextual risk scoring
+    taint.py            # Helpers for adding taint labels
     telemetry.py        # JSONL trace exporter
   tests/
     test_approval_binding_and_ledger.py
@@ -264,12 +280,12 @@ macOS/Linux:
 python3 -m unittest discover -s tests
 ```
 
-Current coverage includes gateway decisions, policy validation, CLI workflows, delegation envelopes, scope attenuation, revocation and expiry checks, approval binding, replay prevention, decision ledger context, MCP adapter behavior, and trace/ledger attribution.
+Current coverage includes gateway decisions, policy validation, CLI workflows, delegation envelopes, scope attenuation, revocation and expiry checks, approval binding, replay prevention, decision ledger context, MCP adapter behavior, taint-sensitive flows, and trace/ledger attribution.
 
 ## Next Milestones
 
 - Export native OpenTelemetry spans.
-- Add taint tracking for retrieved content and memory writes.
+- Extend taint tracking into memory writes and retrieved-document stores.
 - Build a small dashboard for reviewing blocked and approved tool calls.
 - Add policy packs for AppSec, SOC, and software-engineering agents.
 - Replace the stubbed MCP adapter with a live MCP proxy/server integration.

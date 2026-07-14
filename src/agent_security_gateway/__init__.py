@@ -12,6 +12,7 @@ from .models import (
     DelegationState,
 )
 from .policy import GatewayPolicy
+from .taint import add_taint, request_with_taint
 
 __all__ = [
     "AgentSecurityGateway",
@@ -26,4 +27,6 @@ __all__ = [
     "McpGatewayAdapter",
     "McpToolCall",
     "McpToolResult",
+    "add_taint",
+    "request_with_taint",
 ]

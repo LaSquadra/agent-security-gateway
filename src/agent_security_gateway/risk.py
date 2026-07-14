@@ -27,6 +27,7 @@ SECRET_TERMS = (
 
 SENSITIVE_ACTIONS = {"deploy", "delete", "write", "send_external", "execute_shell"}
 LOW_TRUST_SOURCES = {"web", "email", "user_upload", "unknown"}
+HIGH_RISK_TAINTS = {"prompt_injection", "secret", "credential", "untrusted_code"}
 
 
 def score_request(request: AgentRequest) -> tuple[int, list[RiskFinding]]:
@@ -54,12 +55,34 @@ def score_request(request: AgentRequest) -> tuple[int, list[RiskFinding]]:
             )
         )
 
+    matched_taints = set(request.provenance.taint_labels).intersection(HIGH_RISK_TAINTS)
+    for taint in sorted(matched_taints):
+        findings.append(
+            RiskFinding(
+                "tainted_provenance",
+                45,
+                f"Provenance carries high-risk taint label '{taint}'.",
+            )
+        )
+
     if request.action == "send_external" and any(term in text for term in SECRET_TERMS):
         findings.append(
             RiskFinding(
                 "possible_exfiltration",
                 70,
                 "Request combines external transfer with secret-like content.",
+            )
+        )
+
+    if (
+        request.action in {"send_external", "write_file", "deploy", "execute_shell"}
+        and request.provenance.taint_labels
+    ):
+        findings.append(
+            RiskFinding(
+                "tainted_sensitive_flow",
+                40,
+                "Tainted input is flowing into a sensitive action.",
             )
         )
 
@@ -75,6 +98,7 @@ def _request_text(request: AgentRequest) -> str:
         str(request.arguments),
         request.provenance.source,
         request.provenance.retrieved_from or "",
+        " ".join(request.provenance.taint_labels),
     ]
     return " ".join(parts).lower()
 

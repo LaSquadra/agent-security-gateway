@@ -105,6 +105,7 @@ class JsonlTraceExporter:
                 "approval.id": decision.approval_id,
                 "provenance.source": request.provenance.source,
                 "provenance.trust_level": request.provenance.trust_level,
+                "provenance.taint_labels": request.provenance.taint_labels,
                 **_delegation_attributes(request),
                 **extra_attributes,
             },

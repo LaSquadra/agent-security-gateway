@@ -48,6 +48,11 @@ agent or sub-agent
    - Add a durable, JSONL-backed ledger for reconstructing security decisions.
    - The ledger should be separate from operational traces and suitable for audit review.
 
+9. Taint tracking
+   - Carry taint labels from retrieved content, uploaded files, web inputs, and memory.
+   - Raise risk when tainted data flows into sensitive actions.
+   - Preserve taint labels in traces and decision ledger entries.
+
 ## Milestone 1 Status
 
 Milestone 1 begins the control-plane model with:
@@ -97,3 +102,15 @@ Milestone 4 strengthens reconstruction and attribution:
 - Tests verify that MCP trace events and decision ledger entries share the same attribution context.
 
 This gives the project a clearer answer to post-incident questions: who acted, through which delegation chain, under which policy, with which approval, against which resource, and what decision was made?
+
+## Milestone 5 Status
+
+Milestone 5 adds taint-aware risk and evidence:
+
+- `Provenance` can carry `taint_labels`.
+- The risk engine scores high-risk taint labels.
+- Sensitive flows involving tainted input increase risk and can block.
+- Trace events and decision ledger entries record taint labels.
+- Tests cover tainted sensitive flows and trace/ledger taint attribution.
+
+This makes provenance more than source metadata: it now carries risk forward from untrusted content into action-time decisions.

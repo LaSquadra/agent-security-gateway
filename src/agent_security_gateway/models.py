@@ -27,6 +27,7 @@ class Provenance:
     trust_level: str = "unknown"
     retrieved_from: str | None = None
     session_id: str | None = None
+    taint_labels: list[str] = field(default_factory=list)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Provenance":
@@ -35,6 +36,7 @@ class Provenance:
             trust_level=data.get("trust_level", "unknown"),
             retrieved_from=data.get("retrieved_from"),
             session_id=data.get("session_id"),
+            taint_labels=list(data.get("taint_labels", [])),
         )
 
 
