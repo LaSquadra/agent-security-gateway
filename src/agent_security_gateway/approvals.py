@@ -65,6 +65,9 @@ class ApprovalStore:
         policy_version: str = "default",
     ) -> tuple[bool, str]:
         path = self._path(approval_id)
+        if not path.exists():
+            return False, f"Approval '{approval_id}' was not found."
+
         with path.open("r", encoding="utf-8") as approval_file:
             record = json.load(approval_file)
 

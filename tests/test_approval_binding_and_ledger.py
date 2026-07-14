@@ -73,6 +73,24 @@ class ApprovalBindingAndLedgerTests(unittest.TestCase):
         self.assertEqual(decision.decision, Decision.BLOCK)
         self.assertIn("does not match", " ".join(decision.reasons))
 
+    def test_approval_binding_rejects_different_deployment_environment(self) -> None:
+        pending = self.gateway.inspect(self._deploy_request())
+        assert pending.approval_id is not None
+        self.approval_store.resolve(pending.approval_id, "approved", "reviewer")
+
+        decision = self.gateway.inspect(
+            self._deploy_request(pending.approval_id, environment="staging")
+        )
+
+        self.assertEqual(decision.decision, Decision.BLOCK)
+        self.assertIn("does not match", " ".join(decision.reasons))
+
+    def test_missing_approval_reference_blocks_without_crashing(self) -> None:
+        decision = self.gateway.inspect(self._deploy_request("approval-missing"))
+
+        self.assertEqual(decision.decision, Decision.BLOCK)
+        self.assertIn("was not found", " ".join(decision.reasons))
+
     def test_decision_ledger_records_security_context(self) -> None:
         decision = self.gateway.inspect(self._deploy_request())
         entries = [
@@ -87,13 +105,17 @@ class ApprovalBindingAndLedgerTests(unittest.TestCase):
         self.assertEqual(entries[0]["decision"], "require_approval")
         self.assertEqual(entries[0]["tool_name"], "deployment")
 
-    def _deploy_request(self, approval_ref: str | None = None) -> AgentRequest:
+    def _deploy_request(
+        self,
+        approval_ref: str | None = None,
+        environment: str = "production",
+    ) -> AgentRequest:
         return AgentRequest(
             agent_id="release-agent-1",
             role="release_manager",
             tool_name="deployment",
             action="deploy",
-            arguments={"environment": "production"},
+            arguments={"environment": environment},
             user_intent="Deploy the reviewed service to production.",
             provenance=Provenance(source="ticket", trust_level="trusted"),
             delegation=self._envelope(approval_ref),

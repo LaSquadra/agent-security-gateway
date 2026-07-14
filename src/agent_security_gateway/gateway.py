@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from .approvals import ApprovalStore
 from .authz_state import AuthorizationStateStore
-from .envelopes import EnvelopeSigner, envelope_is_expired
+from .envelopes import EnvelopeSigner, envelope_is_expired, parse_utc
 from .ledger import DecisionLedger
-from .models import AgentRequest, Decision, GatewayDecision
+from .models import AgentRequest, Decision, GatewayDecision, request_resource
 from .policy import GatewayPolicy
 from .risk import score_request
 from .telemetry import JsonlTraceExporter
@@ -105,9 +106,15 @@ class AgentSecurityGateway:
         if envelope_is_expired(request.delegation):
             return Decision.BLOCK, ["Delegation envelope is expired."]
 
-        state = self.authz_store.load(request.delegation.delegation_id)
+        try:
+            state = self.authz_store.load(request.delegation.delegation_id)
+        except FileNotFoundError:
+            return Decision.BLOCK, ["Delegation state was not found."]
+
         if state.status != "active":
             return Decision.BLOCK, [f"Delegation status is '{state.status}'."]
+        if state.expires_at and parse_utc(state.expires_at) <= datetime.now(timezone.utc):
+            return Decision.BLOCK, ["Delegation state is expired."]
         if state.agent_id != request.delegation.agent_id:
             return Decision.BLOCK, ["Delegation agent does not match envelope agent."]
         if request.agent_id != request.delegation.agent_id:
@@ -117,7 +124,7 @@ class AgentSecurityGateway:
         if state.revocation_epoch != request.delegation.revocation_epoch:
             return Decision.BLOCK, ["Delegation revocation epoch is stale."]
 
-        resource = request.arguments.get("path") or request.arguments.get("resource")
+        resource = request_resource(request.arguments)
         if not state.scope.allows(request.tool_name, request.action, resource):
             return Decision.BLOCK, ["Requested tool/action is outside delegated scope."]
 

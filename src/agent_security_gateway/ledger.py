@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .models import AgentRequest, GatewayDecision
+from .models import AgentRequest, GatewayDecision, request_resource
 
 
 @dataclass(frozen=True)
@@ -48,7 +48,7 @@ class DecisionLedger:
             approval_id=decision.approval_id,
             tool_name=request.tool_name,
             action=request.action,
-            resource=request.arguments.get("path") or request.arguments.get("resource"),
+            resource=request_resource(request.arguments),
             decision=decision.decision.value,
             risk_score=decision.risk_score,
             reasons=decision.reasons,

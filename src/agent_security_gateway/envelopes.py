@@ -34,11 +34,11 @@ class EnvelopeSigner:
 
 
 def envelope_is_expired(envelope: DelegationEnvelope) -> bool:
-    expires_at = _parse_utc(envelope.expires_at)
+    expires_at = parse_utc(envelope.expires_at)
     return expires_at <= datetime.now(timezone.utc)
 
 
-def _parse_utc(value: str) -> datetime:
+def parse_utc(value: str) -> datetime:
     normalized = value.replace("Z", "+00:00")
     parsed = datetime.fromisoformat(normalized)
     if parsed.tzinfo is None:

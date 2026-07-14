@@ -94,6 +94,82 @@ class DelegationTests(unittest.TestCase):
         self.assertEqual(decision.decision, Decision.BLOCK)
         self.assertIn("outside delegated scope", " ".join(decision.reasons))
 
+    def test_blocks_missing_delegation_state(self) -> None:
+        envelope = self.signer.sign(
+            DelegationEnvelope(
+                delegation_id="dlg-missing",
+                agent_id="agent-child-1",
+                parent_agent_id="agent-root-1",
+                root_principal="user:ryan",
+                scope_ref="scope-read-readme",
+                revocation_epoch=0,
+                expires_at="2099-01-01T00:00:00Z",
+                trace_id="trace-1",
+            )
+        )
+
+        decision = self.gateway.inspect(self._request(envelope))
+
+        self.assertEqual(decision.decision, Decision.BLOCK)
+        self.assertIn("state was not found", " ".join(decision.reasons))
+
+    def test_blocks_expired_delegation_state_even_with_valid_envelope(self) -> None:
+        expired_state = DelegationState(
+            delegation_id="dlg-expired-state",
+            agent_id="agent-child-1",
+            root_principal="user:ryan",
+            scope=DelegationScope(
+                tools=["filesystem"],
+                actions=["read_file"],
+                resources=["README"],
+            ),
+            revocation_epoch=0,
+            expires_at="2000-01-01T00:00:00Z",
+        )
+        self.store.create(expired_state)
+        envelope = self.signer.sign(
+            DelegationEnvelope(
+                delegation_id="dlg-expired-state",
+                agent_id="agent-child-1",
+                root_principal="user:ryan",
+                scope_ref="scope-read-readme",
+                revocation_epoch=0,
+                expires_at="2099-01-01T00:00:00Z",
+                trace_id="trace-1",
+            )
+        )
+
+        decision = self.gateway.inspect(self._request(envelope))
+
+        self.assertEqual(decision.decision, Decision.BLOCK)
+        self.assertIn("state is expired", " ".join(decision.reasons))
+
+    def test_parent_without_resource_constraints_allows_child_resource_subset(self) -> None:
+        parent = DelegationState(
+            delegation_id="dlg-parent-wildcard",
+            agent_id="agent-parent",
+            root_principal="user:ryan",
+            scope=DelegationScope(
+                tools=["filesystem"],
+                actions=["read_file"],
+            ),
+            expires_at="2099-01-01T00:00:00Z",
+        )
+        self.store.create(parent)
+
+        child = self.store.create_child(
+            delegation_id="dlg-child-narrow",
+            agent_id="agent-child-2",
+            parent_delegation_id="dlg-parent-wildcard",
+            scope=DelegationScope(
+                tools=["filesystem"],
+                actions=["read_file"],
+                resources=["README"],
+            ),
+        )
+
+        self.assertEqual(child.parent_delegation_id, "dlg-parent-wildcard")
+
     def _request(self, envelope: DelegationEnvelope | None = None) -> AgentRequest:
         return AgentRequest(
             agent_id="agent-child-1",

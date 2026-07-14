@@ -13,6 +13,14 @@ class Decision(str, Enum):
     REQUIRE_APPROVAL = "require_approval"
 
 
+def request_resource(arguments: dict[str, Any]) -> str | None:
+    for key in ("path", "resource", "environment", "destination"):
+        value = arguments.get(key)
+        if value:
+            return str(value)
+    return None
+
+
 @dataclass(frozen=True)
 class Provenance:
     source: str
@@ -52,11 +60,13 @@ class DelegationScope:
         return any(resource.startswith(allowed) for allowed in self.resources)
 
     def attenuates(self, parent: "DelegationScope") -> bool:
-        return (
-            set(self.tools).issubset(parent.tools)
-            and set(self.actions).issubset(parent.actions)
-            and set(self.resources).issubset(parent.resources)
-        )
+        tools_ok = set(self.tools).issubset(parent.tools)
+        actions_ok = set(self.actions).issubset(parent.actions)
+        if not parent.resources:
+            resources_ok = True
+        else:
+            resources_ok = set(self.resources).issubset(parent.resources)
+        return tools_ok and actions_ok and resources_ok
 
 
 @dataclass(frozen=True)
@@ -211,7 +221,7 @@ class ApprovalBinding:
             agent_id=request.agent_id,
             tool_name=request.tool_name,
             action=request.action,
-            resource=request.arguments.get("path") or request.arguments.get("resource"),
+            resource=request_resource(request.arguments),
             delegation_id=request.delegation.delegation_id if request.delegation else None,
             policy_version=policy_version,
         )
