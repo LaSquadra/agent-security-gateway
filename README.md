@@ -73,16 +73,30 @@ asg demo
 
 Run without installing:
 
+Windows PowerShell:
+
 ```powershell
 $env:PYTHONPATH = "src"
 py -3 -m agent_security_gateway.cli demo
 ```
 
+macOS/Linux:
+
+```bash
+PYTHONPATH=src python3 -m agent_security_gateway.cli demo
+```
+
+## Compatibility
+
+The project is designed to run on Windows, macOS, and Linux with Python 3.10 or newer. The implementation uses `pathlib`, UTF-8 file IO, standard-library JSON handling, and temporary directories so generated traces, approvals, ledgers, and dashboards are not tied to a specific operating system.
+
+The installed `asg` command is the same on all three platforms. The main setup difference is the Python launcher and virtual environment activation command shown above.
+
 ## Showcase
 
 For a portfolio walkthrough, use the narrative showcase:
 
-```powershell
+```text
 asg showcase
 ```
 
@@ -101,7 +115,7 @@ The showcase prints a compact table and writes reviewable artifacts to `showcase
 
 Generate a dashboard as part of the showcase:
 
-```powershell
+```text
 asg showcase --dashboard
 ```
 
@@ -109,50 +123,50 @@ asg showcase --dashboard
 
 Validate the default policy:
 
-```powershell
+```text
 asg validate-policy config/default_policy.json
 ```
 
 Inspect a prompt-injection scenario:
 
-```powershell
+```text
 asg inspect examples/prompt_injection_image.json --policy config/default_policy.json
 ```
 
 Review an approval-required request:
 
-```powershell
+```text
 asg inspect examples/production_deploy.json --policy config/default_policy.json
 asg resolve-approval <approval-id> approved --actor ryan
 ```
 
 Route an MCP-style tool call through the gateway:
 
-```powershell
+```text
 asg mcp-call examples/mcp_low_risk_read_call.json --policy config/default_policy.json
 ```
 
 Write OTLP-compatible JSON spans instead of JSONL traces:
 
-```powershell
+```text
 asg inspect examples/low_risk_read.json --trace-format otlp-json --trace-path traces/otlp-traces.json
 ```
 
 List bundled policy packs:
 
-```powershell
+```text
 asg policy-packs
 ```
 
 Use a named policy pack:
 
-```powershell
+```text
 asg inspect examples/low_risk_read.json --policy-pack software_engineering
 ```
 
 Build a static dashboard from generated artifacts:
 
-```powershell
+```text
 asg dashboard --artifact-dir showcase_output
 ```
 
